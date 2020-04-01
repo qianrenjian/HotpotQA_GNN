@@ -10,7 +10,7 @@ import torch.nn as nn
 import numpy as np
 import ujson as json
 from tqdm import tqdm
-from transformers import AutoConfig, AutoModel, AutoTokenizer
+from transformers import AutoModel, AutoTokenizer
 
 from Nodes import *
 

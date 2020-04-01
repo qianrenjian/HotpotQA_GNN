@@ -1,1 +1,0 @@
-start jupyter lab --config 'D:\\find_papers_by_datasets\jupyter_lab_config_here_win10.py' --NotebookApp.allow_origin='https://colab.research.google.com' --NotebookApp.port_retries=0

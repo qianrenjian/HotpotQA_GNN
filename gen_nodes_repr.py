@@ -151,7 +151,7 @@ def build_save_nodes_feat(index_item, test_mode = False):
     index, ques_item = index_item[0], process(index_item[1])
     if os.path.exists(f"{args.save_dir}/{ques_item['id']}.json"): return
     model_index = index % len(model_list)
-    model_XLNET = model_list[model_index]
+    model = model_list[model_index]
         
     try:
         node_list = ques_item['node_list']
@@ -159,7 +159,7 @@ def build_save_nodes_feat(index_item, test_mode = False):
         Q_node = node_list[0]
         Q_node.cls_feature = get_cls_feature_from_LMmodel(Q_node.content_raw,
                                                         tokenizer = tokenizer,
-                                                        model = model_XLNET,
+                                                        model = model,
                                                         device = DEVICE,
                                                         test_mode=test_mode) # [1,N,D]
 
@@ -170,7 +170,7 @@ def build_save_nodes_feat(index_item, test_mode = False):
                                                             S_node.content_raw,
                                                             add_special_tokens=True,
                                                             tokenizer = tokenizer,
-                                                            model = model_XLNET,
+                                                            model = model,
                                                             device = DEVICE,
                                                             test_mode=test_mode)   
 
@@ -182,7 +182,7 @@ def build_save_nodes_feat(index_item, test_mode = False):
                                                                 all_S_raw,
                                                                 add_special_tokens=True,
                                                                 tokenizer = tokenizer,
-                                                                model = model_XLNET,
+                                                                model = model,
                                                                 device = DEVICE,
                                                                 test_mode=test_mode)
 
@@ -193,7 +193,7 @@ def build_save_nodes_feat(index_item, test_mode = False):
                                                             E_node.content_raw, 
                                                             add_special_tokens=True,
                                                             tokenizer = tokenizer,
-                                                            model = model_XLNET,
+                                                            model = model,
                                                             device = DEVICE,
                                                             test_mode=test_mode)
 

@@ -296,9 +296,9 @@ python gen_nodes_repr.py --cuda_num 1 --end 3 --thread_num 1 \
 
 formal:
 
-python gen_nodes_repr.py --cuda_num 4 --end 3 --thread_num 1 \
---model_path data/models/distilbert-base-uncased-distilled-squad \
---save_dir save_test --spacy_model en_core_web_sm
+python gen_nodes_repr.py --cuda_num 3 --end 60000 --thread_num 3 \
+--model_path data/models/xlnet-large-cased \
+--save_dir save_node_repr --spacy_model en_core_web_lg
 
 """
 

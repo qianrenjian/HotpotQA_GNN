@@ -139,19 +139,15 @@ def get_cls_feature_from_LMmodel(text,text_pair=None,
     model_input = {k:v.to(device) for k,v in model_input.items()}
     
     with torch.no_grad():
-        last_hidden_state = model(**model_input)[0][:,-1,:]
+        last_hidden_state = model(**model_input)[0].cpu()[:,-1,:]
     
     del model_input
     
     return last_hidden_state
 
-def build_save_nodes_feat(index_item, test_mode = False):
+def build_save_nodes_feat(index_item, model, test_mode = False):
     """train on multi-gpu in multi-threadings."""
-    global model_list
-    index, ques_item = index_item[0], process(index_item[1])
-    if os.path.exists(f"{args.save_dir}/{ques_item['id']}.json"): return
-    model_index = index % len(model_list)
-    model = model_list[model_index]
+    index, ques_item = index_item[0], index_item[1]
         
     try:
         node_list = ques_item['node_list']
@@ -160,7 +156,7 @@ def build_save_nodes_feat(index_item, test_mode = False):
         Q_node.cls_feature = get_cls_feature_from_LMmodel(Q_node.content_raw,
                                                         tokenizer = tokenizer,
                                                         model = model,
-                                                        device = DEVICE,
+                                                        device = args.device,
                                                         test_mode=test_mode) # [1,N,D]
 
         # S node
@@ -171,7 +167,7 @@ def build_save_nodes_feat(index_item, test_mode = False):
                                                             add_special_tokens=True,
                                                             tokenizer = tokenizer,
                                                             model = model,
-                                                            device = DEVICE,
+                                                            device = args.device,
                                                             test_mode=test_mode)   
 
         # P node
@@ -183,7 +179,7 @@ def build_save_nodes_feat(index_item, test_mode = False):
                                                                 add_special_tokens=True,
                                                                 tokenizer = tokenizer,
                                                                 model = model,
-                                                                device = DEVICE,
+                                                                device = args.device,
                                                                 test_mode=test_mode)
 
         # E node
@@ -194,28 +190,31 @@ def build_save_nodes_feat(index_item, test_mode = False):
                                                             add_special_tokens=True,
                                                             tokenizer = tokenizer,
                                                             model = model,
-                                                            device = DEVICE,
+                                                            device = args.device,
                                                             test_mode=test_mode)
 
-        ques_item['node_list'] = [node.to_serializable() for node in ques_item['node_list']]
-        ques_item['sp_adj'] = ques_item['sp_adj'].to_serializable()
-
-        if not os.path.exists(args.save_dir): os.mkdir(args.save_dir)
-        with open(f"{args.save_dir}/{ques_item['id']}.json", 'w', encoding='utf-8') as fp:
-            json.dump(ques_item, fp)
+        return (index,ques_item)
     except:
         # print(index_item)
         print_exc()
 
-def save_in_steps_multi(json_train, start = 0, end = 1000, thread_num = 1):
-    thread_num = 1 if thread_num<0 else thread_num
+def save_in_steps(json_train, model, split_num = 200, start = 0, end = 1000):
+    hotpotQA_preprocess_cls = []
+    for index,item in enumerate(tqdm(json_train[start:end])):
+        if os.path.exists(f"{args.save_dir}/{item['_id']}.json"): continue
+        i = build_save_nodes_feat(index_item = (index + start + 1, process(item)), model=model)
+        hotpotQA_preprocess_cls.append(i[1])
+        if i[0] % split_num == 0:
+            
+            for ques_item in tqdm(hotpotQA_preprocess_cls, desc = f'{i[0]}'):
+                ques_item['node_list'] = [node.to_serializable() for node in ques_item['node_list']]
+                ques_item['sp_adj'] = ques_item['sp_adj'].to_serializable()
 
-    pbar = tqdm(total = len(json_train[start:end]), desc = f'building ndoes feature')
-    index_item_list = zip(range(end - start), json_train[start:end])
-    with Pool(thread_num) as pool:
-        pool_iter = pool.imap(build_save_nodes_feat, index_item_list)
-        for r in pool_iter:
-            pbar.update()
+                with open(f"{args.save_dir}/{ques_item['id']}.json", 'w', encoding='utf-8') as fp:
+                    json.dump(ques_item, fp)
+                
+            hotpotQA_preprocess_cls = []
+            torch.cuda.empty_cache()
 
 def make_args():
     parser = argparse.ArgumentParser()
@@ -242,8 +241,14 @@ def make_args():
     
     # train setting.
     parser.add_argument(
-        "--cuda_num",
-        default=1,
+        "--device",
+        default='cuda:0',
+        type=str,
+        help="remain",
+            )
+    parser.add_argument(
+        "--start",
+        default=0,
         type=int,
         help="remain",
             )
@@ -254,19 +259,11 @@ def make_args():
         help="remain",
             )
     parser.add_argument(
-        "--thread_num",
-        default=1,
-        type=int,
-        help="remain",
-            )
-    parser.add_argument(
         "--spacy_model",
         default="en_core_web_sm",
         type=str,
         help="remain",
             )
-
-    parser.add_argument("--use_mini", action="store_true", help="remain")
     args = parser.parse_args()
     return args
 
@@ -279,24 +276,24 @@ if __name__ == '__main__':
 
     with open(args.json_train_path, 'r', encoding='utf-8') as fp:
         json_train = json.load(fp)
-    DEVICE_LIST = [f"cuda:{i}" for i in range(args.cuda_num)]
-    model_list = []
-    for DEVICE in DEVICE_LIST:
-        model = AutoModel.from_pretrained(args.model_path, local_files_only=True)
-        model_list.append(model.to(DEVICE))
 
-    save_in_steps_multi(json_train=json_train, end = args.end, thread_num = args.thread_num)
+    model = AutoModel.from_pretrained(args.model_path, local_files_only=True)
+    model = model.to(args.device)
+
+    save_in_steps(json_train=json_train, model=model, start = args.start, end = args.end)
 
 """
 test:
 
-python gen_nodes_repr.py --cuda_num 1 --end 3 --thread_num 1 \
---model_path data/models/distilbert-base-uncased-distilled-squad \
---save_dir save_test --spacy_model en_core_web_sm
+python gen_nodes_repr.py --device cuda:0 --start 0 --end 5 --model_path data/models/roberta-base --save_dir save_node_repr_roberta --spacy_model en_core_web_sm
+
 
 formal:
 
-python gen_nodes_repr.py --cuda_num 4 --end 40000 --thread_num 4 --model_path data/models/roberta-large --save_dir save_node_repr_roberta --spacy_model en_core_web_lg
+python gen_nodes_repr.py --device cuda:0 --start 0 --end 10000 --model_path data/models/roberta-large --save_dir save_node_repr_roberta --spacy_model en_core_web_lg
+python gen_nodes_repr.py --device cuda:1 --start 10000 --end 20000 --model_path data/models/roberta-large --save_dir save_node_repr_roberta --spacy_model en_core_web_lg
+python gen_nodes_repr.py --device cuda:2 --start 20000 --end 30000 --model_path data/models/roberta-large --save_dir save_node_repr_roberta --spacy_model en_core_web_lg
+python gen_nodes_repr.py --device cuda:3 --start 30000 --end 40000 --model_path data/models/roberta-large --save_dir save_node_repr_roberta --spacy_model en_core_web_lg
 
 """
 

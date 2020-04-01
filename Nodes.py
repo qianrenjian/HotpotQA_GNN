@@ -1,6 +1,44 @@
 import torch
 import numpy as np
 import scipy.sparse as sp
+import spacy
+from transformers import AutoTokenizer
+
+def set_tokenizer(model):
+    global tokenizer
+    if type(model) == str:
+        tokenizer = AutoTokenizer.from_pretrained(model)
+    else:
+        tokenizer = model
+
+def set_spacy(model="en_core_web_sm"):
+    global nlp
+    spacy.prefer_gpu()
+    nlp = spacy.load(model)
+
+def find_NER_in_spacy(raw_content, tokensize=False, ner=False, \
+                      exclude_list = ['PERCENT', 'MONEY', 'QUANTITY', 'ORDINAL', 'CARDINAL']):
+    '''使用spacy进行NER.
+    标注解释: https://spacy.io/api/annotation
+    '''
+    res_nlp = nlp(raw_content)
+    tokens = None
+    if tokensize:
+        tokens =  [str(i) for i in res_nlp.doc]
+    
+    entities_list = None
+    if ner:
+        entities_list = []
+        for item in res_nlp.ents:
+            if item.label_ in exclude_list: continue
+            entities_dict = {}
+            entities_dict['type'] = item.label_
+            entities_dict['span_start'] = item.start
+            entities_dict['content'] = item.text
+            entities_dict['span_end'] = item.end
+            entities_list.append(entities_dict)
+        # print(dir(item))
+    return tokens, entities_list
 
 class BaseNode(object):
     '''Node class for graph'''
@@ -213,6 +251,16 @@ class EntityNode(BaseNode):
     
     def __repr__(self):
         return self.__str__()
+
+edge_type_map = {
+    'Q_P':1,
+    'Q_E':2,
+    'P_S':3,
+    'S_P_hyper':4,
+    'S_E':5,
+    'P_P':6,
+    'S_S':7,
+    }
 
 class Adjacency_sp():
     '''无重复稀疏邻接矩阵'''

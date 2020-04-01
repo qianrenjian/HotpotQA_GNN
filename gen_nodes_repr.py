@@ -139,7 +139,7 @@ def get_cls_feature_from_LMmodel(text,text_pair=None,
     model_input = {k:v.to(device) for k,v in model_input.items()}
     
     with torch.no_grad():
-        last_hidden_state = model(**model_input)[0].cpu()[:,-1,:]
+        last_hidden_state = model(**model_input)[0][:,-1,:]
     
     del model_input
     
@@ -204,7 +204,7 @@ def build_save_nodes_feat(index_item, test_mode = False):
         with open(f"{args.save_dir}/{ques_item['id']}.json", 'w', encoding='utf-8') as fp:
             json.dump(ques_item, fp)
     except:
-        print(index_item)
+        # print(index_item)
         print_exc()
 
 def save_in_steps_multi(json_train, start = 0, end = 1000, thread_num = 1):
@@ -229,7 +229,7 @@ def make_args():
             )
     parser.add_argument(
         "--model_path",
-        default='/g/data/models/xlnet-large-cased',
+        default='data/models/xlnet-large-cased',
         type=str,
         help="remain",
             )
@@ -296,9 +296,7 @@ python gen_nodes_repr.py --cuda_num 1 --end 3 --thread_num 1 \
 
 formal:
 
-python gen_nodes_repr.py --cuda_num 3 --end 60000 --thread_num 3 \
---model_path data/models/xlnet-large-cased \
---save_dir save_node_repr --spacy_model en_core_web_lg
+python gen_nodes_repr.py --cuda_num 4 --end 40000 --thread_num 4 --model_path data/models/roberta-large --save_dir save_node_repr_roberta --spacy_model en_core_web_lg
 
 """
 

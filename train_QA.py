@@ -515,10 +515,11 @@ if __name__ == '__main__':
     args = make_args()
     main(args)
 
-
-# python train_QA.py --use_mini --uncased --permutations --cuda --expand_filepaths_to_save_dir \
-# --model_state_file HotpotQA_QA_BiGRU_distilroberta-base-squad2.pt \
-# --pretrained_model_path data/models/distilroberta-base-squad2 \
-# --log_dir runs_QA_permutations/BiGRU_distilroberta-base-squad2 \
-# --num_epochs 5 \
-# --batch_size 12 
+"""
+ python train_QA.py --use_mini --uncased --permutations --cuda --expand_filepaths_to_save_dir \
+ --model_state_file HotpotQA_QA_BiGRU_distilroberta-base-squad2.pt \
+ --pretrained_model_path data/models/distilroberta-base-squad2 \
+ --log_dir runs_QA_permutations/BiGRU_distilroberta-base-squad2 \
+ --num_epochs 5 \
+ --batch_size 12 
+"""

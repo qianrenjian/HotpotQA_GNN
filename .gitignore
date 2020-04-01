@@ -7,6 +7,8 @@ __pycache__/
 data/*
 save_*/*
 
+start_*.sh
+*.ipynb
 
 # C extensions
 *.so

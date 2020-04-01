@@ -3,9 +3,11 @@ __pycache__/
 *.py[cod]
 *$py.class
 
+.gitignore
+
 .git/
 data/*
-save_*/*
+save_*/
 
 start_*.sh
 *.ipynb

@@ -210,6 +210,7 @@ def save_in_steps(json_train, model, split_num = 200, start = 0, end = 1000):
                 ques_item['node_list'] = [node.to_serializable() for node in ques_item['node_list']]
                 ques_item['sp_adj'] = ques_item['sp_adj'].to_serializable()
 
+                if not os.path.exists(args.save_dir): os.mkdir(args.save_dir)
                 with open(f"{args.save_dir}/{ques_item['id']}.json", 'w', encoding='utf-8') as fp:
                     json.dump(ques_item, fp)
                 
@@ -290,10 +291,10 @@ python gen_nodes_repr.py --device cuda:0 --start 0 --end 5 --model_path data/mod
 
 formal:
 
-python gen_nodes_repr.py --device cuda:0 --start 0 --end 10000 --model_path data/models/roberta-large --save_dir save_node_repr_roberta --spacy_model en_core_web_lg
-python gen_nodes_repr.py --device cuda:1 --start 10000 --end 20000 --model_path data/models/roberta-large --save_dir save_node_repr_roberta --spacy_model en_core_web_lg
-python gen_nodes_repr.py --device cuda:2 --start 20000 --end 30000 --model_path data/models/roberta-large --save_dir save_node_repr_roberta --spacy_model en_core_web_lg
-python gen_nodes_repr.py --device cuda:3 --start 30000 --end 40000 --model_path data/models/roberta-large --save_dir save_node_repr_roberta --spacy_model en_core_web_lg
+python gen_nodes_repr.py --device cuda:0 --start 0 --end 10000 --model_path data/models/xlnet-large-cased --save_dir save_node_repr_xlnet-large-cased --spacy_model en_core_web_lg
+python gen_nodes_repr.py --device cuda:1 --start 10000 --end 20000 --model_path data/models/xlnet-large-cased --save_dir save_node_repr_xlnet-large-cased --spacy_model en_core_web_lg
+python gen_nodes_repr.py --device cuda:2 --start 20000 --end 30000 --model_path data/models/xlnet-large-cased --save_dir save_node_repr_xlnet-large-cased --spacy_model en_core_web_lg
+python gen_nodes_repr.py --device cuda:3 --start 30000 --end 40000 --model_path data/models/xlnet-large-cased --save_dir save_node_repr_xlnet-large-cased --spacy_model en_core_web_lg
 
 """
 

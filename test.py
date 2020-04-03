@@ -201,3 +201,6 @@ python train_QA.py --uncased --use_mini --permutations --cuda --expand_filepaths
 --num_epochs 1 \
 --batch_size 7 \
 --learning_rate 1e-4
+
+
+### train GNN

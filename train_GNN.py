@@ -34,43 +34,43 @@ def compute_recall(logits, labels, mask):
     all_positive_labels = (labels * mask).sum().item()
     return float(all_positive_predicts) / all_positive_labels
 
-args = Namespace(
-    # Data and path information
-    model_state_file = "GNN_HotpotQA_hidden64_heads8_pad300_chunk_first.pt",
-    save_dir = 'save_cache_GNN',
-    hotpotQA_item_folder = 'save_preprocess_new',
-    log_dir='runs_GNN/hidden64_heads8_pad300_chunk_first',
+# args = Namespace(
+#     # Data and path information
+#     model_state_file = "GNN_hidden64_heads8_pad300_chunk_first.pt",
+#     save_dir = 'save_cache_GNN',
+#     hotpotQA_item_folder = 'save_preprocess_new',
+#     log_dir='runs_GNN/hidden64_heads8_pad300_chunk_first',
 
-    # Dataset parameter
-    pad_max_num = 300,
-    pad_value = 0,
+#     # Dataset parameter
+#     pad_max_num = 300,
+#     pad_value = 0,
 
-    # Training hyper parameter
-    chunk_size = 15000,
-    num_epochs=3,
-    learning_rate=1e-3,
-    batch_size=24,
-    topN_sents=4,
-    seed=1337,
-    early_stopping_criteria=5,
-    flush_secs=60,
+#     # Training hyper parameter
+#     chunk_size = 15000,
+#     num_epochs=3,
+#     learning_rate=1e-3,
+#     batch_size=24,
+#     topN_sents=4,
+#     seed=1337,
+#     early_stopping_criteria=5,
+#     flush_secs=60,
 
-    # GNN parameters
-    features = 768,
-    hidden = 64,
-    nclass = 2,
-    dropout = 0,
-    alpha = 0.3,
-    nheads = 8,
+#     # GNN parameters
+#     features = 768,
+#     hidden = 64,
+#     nclass = 2,
+#     dropout = 0,
+#     alpha = 0.3,
+#     nheads = 8,
     
-    # Runtime hyper parameter
-    cuda=True,
-    device=None,
-    reload_from_files=False,
-    expand_filepaths_to_save_dir=True,
-    )
+#     # Runtime hyper parameter
+#     cuda=True,
+#     device=None,
+#     reload_from_files=False,
+#     expand_filepaths_to_save_dir=True,
+#     )
 
-def main():
+def main(args):
     if not torch.cuda.is_available():
         args.cuda = False
     if not args.device:
@@ -328,5 +328,75 @@ def main():
         print(f"err in chunk {chunk_i}, epoch_index {epoch_index}, batch_index {batch_index}.")
         print_exc()
 
+def make_args():
+    parser = argparse.ArgumentParser()
+
+    # Data and path information
+    parser.add_argument(
+        "--model_state_file",
+        default="GNN_hidden64_heads8_pad300_chunk_first.pt",
+        type=str,
+        help="remain",
+            )
+    parser.add_argument(
+        "--save_dir",
+        default='save_cache_GNN',
+        type=str,
+        help="remain",
+            )
+    parser.add_argument(
+        "--hotpotQA_item_folder",
+        default='save_preprocess_new',
+        type=str,
+        help="remain",
+            )
+    parser.add_argument(
+        "--log_dir",
+        default='runs_GNN/hidden64_heads8_pad300_chunk_first',
+        type=str,
+        help="remain",
+            )
+
+    # Dataset parameter
+    parser.add_argument("--pad_max_num",default=300,type=int,help="remain")
+    parser.add_argument("--pad_value",default=0,type=int,help="remain")
+
+    # Training hyper parameter
+    parser.add_argument("--chunk_size",default=15000,type=int,help="remain")
+    parser.add_argument("--num_epochs",default=3,type=int,help="remain")
+    parser.add_argument("--learning_rate",default=1e-3,type=int,help="remain")
+    parser.add_argument("--batch_size",default=24,type=int,help="remain")
+    parser.add_argument("--topN_sents",default=300,type=int,help="remain")
+    parser.add_argument("--seed",default=0,type=int,help="remain")
+    parser.add_argument("--early_stopping_criteria",default=300,type=int,help="remain")
+    parser.add_argument("--flush_secs",default=0,type=int,help="remain")
+
+    # GNN parameters
+    parser.add_argument("--features",default=768,type=int,help="remain")
+    parser.add_argument("--hidden",default=64,type=int,help="remain")
+    parser.add_argument("--nclass",default=2,type=int,help="remain")
+    parser.add_argument("--dropout",default=0,type=int,help="remain")
+    parser.add_argument("--alpha",default=0.3,type=int,help="remain")
+    parser.add_argument("--nheads",default=8,type=int,help="remain",)
+
+    # Runtime hyper parameter
+    parser.add_argument("--cuda", action="store_true", help="remain")
+    parser.add_argument("--device",default=None,type=str,help="remain",)
+    parser.add_argument("--reload_from_files", action="store_true", help="remain")
+    parser.add_argument("--expand_filepaths_to_save_dir", action="store_true", help="remain")
+
+    args = parser.parse_args()
+    return args
+
 if __name__ == '__main__':
-    main()
+    args = make_args()
+    main(args)
+
+"""
+python train_GNN.py --cuda --expand_filepaths_to_save_dir \
+    --model_state_file GNN_hidden64_heads8_pad300_chunk_first \
+    --save_dir save_cache_GNN \
+    --hotpotQA_item_folder save_preprocess_new \
+    --log_dir runs_GNN/hidden64_heads8_pad300_chunk_first \
+    --chunk_size 100
+"""

@@ -89,10 +89,10 @@ if __name__ == '__main__':
     model = GAT_HotpotQA().to(device)
     
     def gen():
-        for i in range(10):
-            feat = torch.randn([7,200,768]).to(device)
+        for i in range(100):
+            feat = torch.randn([50,200,768]).to(device)
             adj = torch.randint(0, 2, [200,200]).to(device)
-            label = torch.randint(0, 2, [7,200]).to(device)
+            label = torch.randint(0, 2, [50,200]).to(device)
             yield (feat, adj, label)
 
     from apex import amp
@@ -117,3 +117,7 @@ if __name__ == '__main__':
         optimizer.step()
 
     print("final loss = ", loss)
+
+"""
+CUDA_VISIBLE_DEVICES=0,1 python -m torch.distributed.launch GNN.py
+"""

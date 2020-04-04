@@ -105,7 +105,7 @@ if __name__ == '__main__':
     optimizer = torch.optim.SGD(model.parameters(), lr=1e-3)
     model, optimizer = amp.initialize(model, optimizer, opt_level="O1")
     # model = DistributedDataParallel(model)
-    model = nn.parallel.DistributedDataParallel(model, device_ids=[0], output_device=0, find_unused_parameters=True)
+    model = nn.parallel.DistributedDataParallel(model, device_ids=[0,1], output_device=0, find_unused_parameters=True)
     loss_fn = nn.CrossEntropyLoss()
 
     for index,i in enumerate(gen()):

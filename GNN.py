@@ -53,9 +53,9 @@ class GAT_HotpotQA(nn.Module):
         super(GAT_HotpotQA, self).__init__()
         self.dropout = dropout
 
-        self.attentions = [GraphAttentionLayer(features, hidden, dropout=dropout, 
+        self.attentions = nn.ModuleList([GraphAttentionLayer(features, hidden, dropout=dropout, 
                                                alpha=alpha, concat=True, nodes_num=nodes_num) \
-                           for _ in range(nheads)]
+                           for _ in range(nheads)])
         for i, attention in enumerate(self.attentions):
             self.add_module('attention_{}'.format(i), attention)
 
@@ -79,13 +79,10 @@ class GAT_HotpotQA(nn.Module):
             self._parameters[k] = self._parameters[k].to(device)
 
     def forward(self, feat_matrix, adj):
-        print(f"self.W2.device: {self.W2.device}")
-        feat_matrix = feat_matrix.to(self.W2.device)
-        adj = adj.to(self.W2.device)
-        print(f"feat_matrix.device: {feat_matrix.device}")
-        print(f"adj.device: {adj.device}")
+        # feat_matrix = feat_matrix.to(self.W2.device)
+        # adj = adj.to(self.W2.device)
 
-        self.set_device(self.W2.device)
+        # self.set_device(self.W2.device)
         # features (B, N, dim) , adj (B, N, N)
         feat_matrix = F.dropout(feat_matrix, self.dropout, training=self.training)
         feat_matrix = torch.cat([att(feat_matrix, adj) for att in self.attentions], dim=-1) # (B,N,hidden*heads)

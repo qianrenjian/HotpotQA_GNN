@@ -106,6 +106,7 @@ def main(args):
     if args.cuda:
         classifier = classifier.cuda()
         if args.fp16: classifier, optimizer = amp.initialize(classifier, optimizer, opt_level=opt_level)
+        torch.distributed.init_process_group(backend="nccl")
         classifier = nn.parallel.DistributedDataParallel(classifier)
 
     if args.reload_from_files:
@@ -406,7 +407,6 @@ def make_args():
 if __name__ == '__main__':
     args = make_args()
     os.environ['CUDA_VISIBLE_DEVICES'] = args.visible_devices
-    torch.distributed.init_process_group(backend='nccl', init_method=f'tcp://localhost:{args.dbp_port}', rank=0, world_size=1)
     main(args)
 
 """

@@ -141,7 +141,8 @@ def main(args):
         cursor_train = 0
         cursor_val = 0
         # for epoch_index in range(args.num_epochs):
-
+        if args.chunk_size < 0:
+            args.chunk_size = total_items
         for chunk_i in range(0, total_items, args.chunk_size):
             dataset = HotpotQA_GNN_Dataset.build_dataset(hotpotQA_item_folder = args.hotpotQA_item_folder,
                                                         i_from = chunk_i, 

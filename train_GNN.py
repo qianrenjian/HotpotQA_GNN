@@ -1,6 +1,7 @@
 import os
 import sys
 from argparse import Namespace
+import argparse
 import time
 
 import torch
@@ -90,8 +91,6 @@ def main(args):
     classifier = GAT_HotpotQA(features=args.features, hidden=args.hidden, nclass=args.nclass, 
                                 dropout=args.dropout, alpha=args.alpha, nheads=args.nheads, 
                                 nodes_num=args.pad_max_num)
-    classifier = classifier.to(args.device)
-    classifier.train()
 
     class_weights_sent, class_weights_para, class_weights_Qtype = \
                 HotpotQA_GNN_Dataset.get_weights(device=args.device)
@@ -104,7 +103,10 @@ def main(args):
 
     # Initialization
     opt_level = 'O1'
-    classifier, optimizer = amp.initialize(classifier, optimizer, opt_level=opt_level)
+    if args.cuda:
+        classifier = classifier.cuda()
+        classifier, optimizer = amp.initialize(classifier, optimizer, opt_level=opt_level)
+        classifier = nn.parallel.DistributedDataParallel(classifier)
 
     if args.reload_from_files:
         checkpoint = torch.load(args.model_state_file)
@@ -385,18 +387,30 @@ def make_args():
     parser.add_argument("--reload_from_files", action="store_true", help="remain")
     parser.add_argument("--expand_filepaths_to_save_dir", action="store_true", help="remain")
 
+    # Data parallel setting
+    parser.add_argument("--gpu0_bsz",default=6,type=int,help="remain",)
+    parser.add_argument("--acc_grad",default=1,type=int,help="remain",)
+    parser.add_argument('--local_rank', metavar='int', type=int, dest='rank', default=0, help='rank')
+    parser.add_argument("--dbp_port",default=23456,type=int,help="remain",)
+    parser.add_argument("--visible_devices",default='0',type=str,help="remain",)
+
     args = parser.parse_args()
     return args
 
 if __name__ == '__main__':
     args = make_args()
+    os.environ['CUDA_VISIBLE_DEVICES'] = args.visible_devices
+    torch.distributed.init_process_group(backend='nccl', init_method=f'tcp://localhost:{args.dbp_port}', rank=0, world_size=1)
     main(args)
 
 """
-python train_GNN.py --cuda --expand_filepaths_to_save_dir \
-    --model_state_file GNN_hidden64_heads8_pad300_chunk_first \
+test
+python -m torch.distributed.launch train_GNN.py --cuda --expand_filepaths_to_save_dir \
+    --reload_from_files \
+    --model_state_file GNN_hidden64_heads8_pad300_chunk_first.pt \
     --save_dir save_cache_GNN \
     --hotpotQA_item_folder save_preprocess_new \
-    --log_dir runs_GNN/hidden64_heads8_pad300_chunk_first \
+    --log_dir parallel_runs_GNN/hidden64_heads8_pad300_chunk_first \
+    --visible_devices 0,1
     --chunk_size 100
 """

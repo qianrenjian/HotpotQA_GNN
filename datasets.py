@@ -39,10 +39,8 @@ class HotpotQA_GNN_Dataset(Dataset):
     @classmethod
     def build_dataset(cls, hotpotQA_item_folder = 'save_preprocess_new',
                       i_from = 0, i_to = 1000, ratio_train=0.7, seed=123):
-
         hotpotQA_item_path_list = os.listdir(hotpotQA_item_folder)
         hotpotQA_item_path_list = [f'{hotpotQA_item_folder}/{item_path}' for item_path in hotpotQA_item_path_list]
-        
         hotpotQA_item_list = [HotpotQA_GNN_Dataset._rebuild(path) \
                               for path in tqdm(hotpotQA_item_path_list[i_from:i_to], 
                                                desc = f"loading {i_from}~{i_to}")]

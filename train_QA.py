@@ -121,7 +121,7 @@ def main(args):
     classifier = AutoQuestionAnswering.from_pretrained(model_path=args.pretrained_model_path,
                                                         cls_index=tokenizer.cls_token_id)
     classifier.freeze_to_layer_by_name(args.freeze_layer_name)
-    classifier = classifier.to(args.device)
+    # classifier = BalancedDataParallel(args.gpu0_bsz // args.acc_grad, classifier, dim=0).to(args.device)
     classifier.train()
 
     loss_fct = nn.CrossEntropyLoss(ignore_index=-100)
@@ -142,7 +142,9 @@ def main(args):
     # Initialization
     opt_level = 'O1'
     if args.cuda:
+        classifier = classifier.cuda()
         classifier, optimizer = amp.initialize(classifier, optimizer, opt_level=opt_level)
+        classifier = nn.parallel.DistributedDataParallel(classifier)
 
     if args.reload_from_files:
         checkpoint = torch.load(args.model_state_file)
@@ -266,8 +268,10 @@ def main(args):
                 train_bar.update()
 
                 writer.add_scalar('loss/train', loss.item(), cursor_train)
-                writer.add_scalar('ans_span_accuracy/train', ans_span_accuracy, cursor_train)
-                writer.add_scalar('yes_no_span_accuracy/train', yes_no_span_accuracy, cursor_train)
+                if ans_span_accuracy:
+                    writer.add_scalar('ans_span_accuracy/train', ans_span_accuracy, cursor_train)
+                if yes_no_span_accuracy:
+                    writer.add_scalar('yes_no_span_accuracy/train', yes_no_span_accuracy, cursor_train)
 
                 writer.add_scalar('running_loss/train', running_loss, cursor_train)
                 writer.add_scalar('running_ans_span_accuracy/train', running_ans_span_accuracy, cursor_train)
@@ -325,8 +329,10 @@ def main(args):
                 val_bar.update()
 
                 writer.add_scalar('loss/val', loss.item(), cursor_val)
-                writer.add_scalar('ans_span_accuracy/val', ans_span_accuracy, cursor_val)
-                writer.add_scalar('yes_no_span_accuracy/val', yes_no_span_accuracy, cursor_val)
+                if ans_span_accuracy:
+                    writer.add_scalar('ans_span_accuracy/val', ans_span_accuracy, cursor_val)
+                if yes_no_span_accuracy:
+                    writer.add_scalar('yes_no_span_accuracy/val', yes_no_span_accuracy, cursor_val)
 
                 writer.add_scalar('running_loss/val', running_loss, cursor_val)
                 writer.add_scalar('running_ans_span_accuracy/val', running_ans_span_accuracy, cursor_val)
@@ -335,10 +341,11 @@ def main(args):
 
             train_state['val_running_loss'].append(running_loss)
 
-            train_state = update_train_state(args=args,
-                                            model=classifier, 
-                                            optimizer = optimizer,
-                                            train_state=train_state)
+            if not args.use_mini:
+                train_state = update_train_state(args=args,
+                                                model=classifier, 
+                                                optimizer = optimizer,
+                                                train_state=train_state)
 
             # scheduler.step(train_state['train_running_loss'][-1])
 
@@ -390,12 +397,7 @@ def make_args():
         type=str,
         help="remain",
             )
-    parser.add_argument(
-        "--freeze_layer_name",
-        default='all',
-        type=str,
-        help="remain",
-            )
+    parser.add_argument("--freeze_layer_name",default='all',type=str,help="remain")
 
     # SummaryWriter
     parser.add_argument(
@@ -404,20 +406,10 @@ def make_args():
         type=str,
         help="remain",
             )
-    parser.add_argument(
-        "--flush_secs",
-        default=120,
-        type=int,
-        help="remain",
-            )
+    parser.add_argument("--flush_secs",default=120,type=int,help="remain",)
 
     # colab
-    parser.add_argument(
-        "--model_type",
-        default=None,
-        type=str,
-        help="remain",
-            )
+    parser.add_argument("--model_type",default=None,type=str,help="remain",)
     parser.add_argument("--colab", action="store_true", help="remain")
     parser.add_argument(
         "--colab_data_path",
@@ -432,79 +424,32 @@ def make_args():
         help="remain",
             )
 
-    # dataset parameters
+    # Dataset parameters
     parser.add_argument("--uncased", action="store_true", help="remain")
-    parser.add_argument(
-        "--topN_sents",
-        default=3,
-        type=int,
-        help="remain",
-            )
-    parser.add_argument(
-        "--max_length",
-        default=512,
-        type=int,
-        help="remain",
-            )
+    parser.add_argument("--topN_sents",default=3,type=int,help="remain",)
+    parser.add_argument("--max_length",default=512,type=int,help="remain",)
     parser.add_argument("--permutations", action="store_true", help="remain")
 
     # Training hyper parameter
-    parser.add_argument(
-        "--num_epochs",
-        default=1,
-        type=int,
-        help="remain",
-            )
-    parser.add_argument(
-        "--warmup_steps",
-        default=0,
-        type=int,
-        help="remain",
-            )
-    parser.add_argument(
-        "--learning_rate",
-        default=1e-3,
-        type=float,
-        help="remain",
-            )
-    parser.add_argument(
-        "--batch_size",
-        default=12,
-        type=int,
-        help="remain",
-            )
-    parser.add_argument(
-        "--seed",
-        default=666,
-        type=int,
-        help="remain",
-            )
-    parser.add_argument(
-        "--early_stopping_criteria",
-        default=3,
-        type=int,
-        help="remain",
-            )
-    parser.add_argument(
-        "--weight_decay",
-        default=0.01,
-        type=float,
-        help="remain",
-            )
-    parser.add_argument(
-        "--adam_epsilon",
-        default=1e-8,
-        type=float,
-        help="remain",
-            )
+    parser.add_argument("--num_epochs",default=1,type=int,help="remain",)
+    parser.add_argument("--batch_size",default=12,type=int,help="remain",)
+    parser.add_argument("--warmup_steps",default=0,type=int,help="remain",)
+    parser.add_argument("--learning_rate",default=1e-3,type=float,help="remain",)
+    parser.add_argument("--seed",default=666,type=int,help="remain",)
+    parser.add_argument("--early_stopping_criteria",default=3,type=int,help="remain",)
+    parser.add_argument("--weight_decay",default=0.01,type=float,help="remain",)
+    parser.add_argument("--adam_epsilon",default=1e-8,type=float,help="remain",)
+
+    # Data parallel setting
+    parser.add_argument("--gpu0_bsz",default=6,type=int,help="remain",)
+    parser.add_argument("--acc_grad",default=1,type=int,help="remain",)
+    parser.add_argument('--local_rank', metavar='int', type=int, dest='rank', default=0, help='rank')
+    parser.add_argument("--dbp_port",default=23456,type=int,help="remain",)
+    parser.add_argument("--visible_devices",default='0',type=str,help="remain",)
 
     # Runtime hyper parameter
     parser.add_argument("--cuda", action="store_true", help="remain")
-    parser.add_argument(
-        "--device",
-        default=None,
-        help="remain",
-            )
+    parser.add_argument("--device",default=None,help="remain",)
     parser.add_argument("--reload_from_files", action="store_true", help="remain")
     parser.add_argument("--expand_filepaths_to_save_dir", action="store_true", help="remain")
     args = parser.parse_args()
@@ -513,13 +458,17 @@ def make_args():
 
 if __name__ == '__main__':
     args = make_args()
+    os.environ['CUDA_VISIBLE_DEVICES'] = args.visible_devices
+    torch.distributed.init_process_group(backend='nccl', init_method=f'tcp://localhost:{args.dbp_port}', rank=0, world_size=1)
     main(args)
 
 """
- python train_QA.py --use_mini --uncased --permutations --cuda --expand_filepaths_to_save_dir \
- --model_state_file HotpotQA_QA_BiGRU_distilroberta-base-squad2.pt \
- --pretrained_model_path data/models/distilroberta-base-squad2 \
- --log_dir runs_QA_permutations/BiGRU_distilroberta-base-squad2 \
- --num_epochs 5 \
- --batch_size 12 
+test
+python -m torch.distributed.launch train_QA.py --use_mini --uncased --permutations \
+    --cuda --expand_filepaths_to_save_dir \
+    --model_state_file HotpotQA_QA_BiGRU_distilroberta-base-squad2.pt \
+    --pretrained_model_path data/models/distilroberta-base-squad2 \
+    --log_dir parallel_runs_QA_permutations/BiGRU_distilroberta-base-squad2 \
+    --num_epochs 1 \
+    --batch_size 12 
 """

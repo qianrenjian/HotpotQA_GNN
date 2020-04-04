@@ -18,6 +18,7 @@ import ujson as json
 from tqdm import tqdm
 from transformers import AutoConfig, AutoModel, AutoTokenizer
 from apex import amp
+from apex.parallel import DistributedDataParallel
 
 from datasets import HotpotQA_GNN_Dataset, gen_GNN_batches
 from GNN import GAT_HotpotQA
@@ -72,16 +73,28 @@ def compute_recall(logits, labels, mask):
 #     expand_filepaths_to_save_dir=True,
 #     )
 
-def main(args):
+def set_envs(args):
+    if args.fp16:
+        # FOR DISTRIBUTED:  Set the device according to local_rank.
+        torch.cuda.set_device(args.local_rank)
+
+        # FOR DISTRIBUTED:  Initialize the backend.  torch.distributed.launch will provide
+        # environment variables, and requires that you use init_method=`env://`.
+        torch.distributed.init_process_group(backend='nccl',
+                                            init_method='env://')
+    torch.backends.cudnn.benchmark = True
+
     if not torch.cuda.is_available():
         args.cuda = False
     if not args.device:
         args.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     if args.expand_filepaths_to_save_dir:
         args.model_state_file = os.path.join(args.save_dir,args.model_state_file)
-    
     set_seed_everywhere(args.seed, args.cuda)
     handle_dirs(args.save_dir)
+
+def main(args):
+    set_envs(args)
     print("Using: {}".format(args.device))
 
     total_items = os.popen(f'ls -l {args.hotpotQA_item_folder} |grep "^-"| wc -l').readlines()[0].strip()
@@ -107,11 +120,12 @@ def main(args):
     opt_level = 'O1'
     if args.cuda:
         classifier = classifier.to(args.device)
-        if args.fp16: classifier, optimizer = amp.initialize(classifier, optimizer, opt_level=opt_level)
-        classifier = nn.DataParallel(classifier)
-
-        # torch.distributed.init_process_group(backend="nccl")
-        # classifier = nn.parallel.DistributedDataParallel(classifier)
+        if args.fp16:
+            classifier, optimizer = amp.initialize(classifier, optimizer, opt_level=opt_level)
+            classifier = DistributedDataParallel(classifier)
+        else:
+            # classifier = nn.DataParallel(classifier)
+            classifier = nn.parallel.DistributedDataParallel(classifier)
 
     if args.reload_from_files:
         checkpoint = torch.load(args.model_state_file)

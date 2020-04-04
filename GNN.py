@@ -91,7 +91,7 @@ if __name__ == '__main__':
     def gen():
         for i in range(100):
             feat = torch.randn([50,200,768]).to(device)
-            adj = torch.randint(0, 2, [200,200]).to(device)
+            adj = torch.randint(0, 2, [50, 200,200]).to(device)
             label = torch.randint(0, 2, [50,200]).to(device)
             yield (feat, adj, label)
 
@@ -104,13 +104,17 @@ if __name__ == '__main__':
 
     optimizer = torch.optim.SGD(model.parameters(), lr=1e-3)
     model, optimizer = amp.initialize(model, optimizer, opt_level="O1")
-    model = DistributedDataParallel(model)
+    # model = DistributedDataParallel(model)
+    model = nn.parallel.DistributedDataParallel(model, device_ids=[0], output_device=0, find_unused_parameters=True)
     loss_fn = nn.CrossEntropyLoss()
 
     for index,i in enumerate(gen()):
         optimizer.zero_grad()
-        logits, _, _, = model(i[0], i[1])
-        loss = loss_fn(logits.view(-1, 2), i[2].view(-1))
+        logits_sent, logits_para, logits_Qtype = model(i[0], i[1])
+        loss1 = loss_fn(logits_sent.view(-1, 2), i[2].view(-1))
+        loss2 = loss_fn(logits_para.view(-1, 2), i[2].view(-1))
+        loss3 = loss_fn(logits_Qtype, torch.tensor([1]*50, device='cuda'))
+        loss = loss1 + loss2 + loss3
         with amp.scale_loss(loss, optimizer) as scaled_loss:
             scaled_loss.backward()
         print(index, loss)
@@ -119,5 +123,5 @@ if __name__ == '__main__':
     print("final loss = ", loss)
 
 """
-CUDA_VISIBLE_DEVICES=0,1 python -m torch.distributed.launch GNN.py
+git pull && CUDA_VISIBLE_DEVICES=0,1 python -m torch.distributed.launch GNN.py
 """

@@ -65,4 +65,7 @@ for t in range(500):
 if args.local_rank == 0:
     print("final loss = ", loss)
 
-# git pull && python -m torch.distributed.launch nvidia_test.py
+"""
+git pull && python -m torch.distributed.launch nvidia_test.py
+"""
+

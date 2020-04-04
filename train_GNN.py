@@ -190,6 +190,7 @@ def main(args):
                                                 batch_dict['answer_type'].view(-1)) # [B,2] [B]
 
                     loss = loss_sent + loss_para + loss_Qtype
+                    print(f"loss:{loss}")
                     running_loss += (loss.item() - running_loss) / (batch_index + 1)
 
                     with amp.scale_loss(loss, optimizer) as scaled_loss:
@@ -368,7 +369,7 @@ def make_args():
     parser.add_argument("--num_epochs",default=3,type=int,help="remain")
     parser.add_argument("--learning_rate",default=1e-3,type=float,help="remain")
     parser.add_argument("--batch_size",default=24,type=int,help="remain")
-    parser.add_argument("--topN_sents",default=300,type=int,help="remain")
+    parser.add_argument("--topN_sents",default=3,type=int,help="remain")
     parser.add_argument("--seed",default=0,type=int,help="remain")
     parser.add_argument("--early_stopping_criteria",default=300,type=int,help="remain")
     parser.add_argument("--flush_secs",default=0,type=int,help="remain")

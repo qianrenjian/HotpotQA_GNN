@@ -75,11 +75,7 @@ def compute_recall(logits, labels, mask):
 
 def set_envs(args):
     if args.fp16:
-        # FOR DISTRIBUTED:  Set the device according to local_rank.
         torch.cuda.set_device(args.local_rank)
-
-        # FOR DISTRIBUTED:  Initialize the backend.  torch.distributed.launch will provide
-        # environment variables, and requires that you use init_method=`env://`.
         torch.distributed.init_process_group(backend='nccl',
                                             init_method='env://')
     torch.backends.cudnn.benchmark = True
@@ -413,7 +409,7 @@ def make_args():
     # Data parallel setting
     parser.add_argument("--gpu0_bsz",default=6,type=int,help="remain",)
     parser.add_argument("--acc_grad",default=1,type=int,help="remain",)
-    parser.add_argument('--local_rank', metavar='int', type=int, dest='rank', default=0, help='rank')
+    parser.add_argument('--local_rank', metavar='int', type=int, default=0, help='rank')
     parser.add_argument("--dbp_port",default=23456,type=int,help="remain",)
     parser.add_argument("--visible_devices",default=None,type=str,help="remain",)
 

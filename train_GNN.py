@@ -3,6 +3,7 @@ import sys
 from argparse import Namespace
 import argparse
 import time
+from traceback import print_exc
 
 import torch
 import torch.nn as nn
@@ -21,7 +22,7 @@ from apex import amp
 from datasets import HotpotQA_GNN_Dataset, gen_GNN_batches
 from GNN import GAT_HotpotQA
 from utils import set_seed_everywhere, handle_dirs, make_train_state, update_train_state
-from traceback import print_exc
+from data_parallel_my import BalancedDataParallel
 
 def compute_accuracy(logits=None, labels=None, predict=None):
     if predict == None: _, predict = logits.max(dim=1)
@@ -104,10 +105,10 @@ def main(args):
     # Initialization
     opt_level = 'O1'
     if args.cuda:
-        classifier = classifier.cuda()
         if args.fp16: classifier, optimizer = amp.initialize(classifier, optimizer, opt_level=opt_level)
-        torch.distributed.init_process_group(backend="nccl")
-        classifier = nn.parallel.DistributedDataParallel(classifier)
+        classifier = BalancedDataParallel(args.gpu0_bsz // args.acc_grad, classifier, dim=0).cuda()
+        # torch.distributed.init_process_group(backend="nccl")
+        # classifier = nn.parallel.DistributedDataParallel(classifier)
 
     if args.reload_from_files:
         checkpoint = torch.load(args.model_state_file)
@@ -166,7 +167,6 @@ def main(args):
 
                     logits_sent, logits_para, logits_Qtype = \
                                     classifier(batch_dict['feature_matrix'], batch_dict['adj'])
-                    print(f"logits_sent: {logits_sent}")
 
                     # topN sents
                     max_value, max_index = logits_sent.max(dim=-1) # max_index is predict class.
@@ -192,7 +192,6 @@ def main(args):
                                                 batch_dict['answer_type'].view(-1)) # [B,2] [B]
 
                     loss = loss_sent + loss_para + loss_Qtype
-                    print(f"loss:{loss}")
                     running_loss += (loss.item() - running_loss) / (batch_index + 1)
 
                     if args.fp16:

@@ -399,14 +399,14 @@ def make_args():
     parser.add_argument("--acc_grad",default=1,type=int,help="remain",)
     parser.add_argument('--local_rank', metavar='int', type=int, dest='rank', default=0, help='rank')
     parser.add_argument("--dbp_port",default=23456,type=int,help="remain",)
-    parser.add_argument("--visible_devices",default='0',type=str,help="remain",)
+    parser.add_argument("--visible_devices",default=None,type=str,help="remain",)
 
     args = parser.parse_args()
     return args
 
 if __name__ == '__main__':
     args = make_args()
-    os.environ['CUDA_VISIBLE_DEVICES'] = args.visible_devices
+    if args.visible_devices: os.environ['CUDA_VISIBLE_DEVICES'] = args.visible_devices
     main(args)
 
 """

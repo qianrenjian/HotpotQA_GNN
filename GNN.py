@@ -75,8 +75,8 @@ class GAT_HotpotQA(nn.Module):
         
 
     def forward(self, feat_matrix, adj):
-        feat_matrix = feat_matrix.to(self.device)
-        adj = adj.to(self.device)
+        feat_matrix = feat_matrix.to(self.W2.device)
+        adj = adj.to(self.W2.device)
         # features (B, N, dim) , adj (B, N, N)
         feat_matrix = F.dropout(feat_matrix, self.dropout, training=self.training)
         feat_matrix = torch.cat([att(feat_matrix, adj) for att in self.attentions], dim=-1) # (B,N,hidden*heads)

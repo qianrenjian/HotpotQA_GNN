@@ -90,3 +90,4 @@ class GAT_HotpotQA(nn.Module):
 
 if __name__ == '__main__':
     model = GAT_HotpotQA()
+    print(model.W2.device)

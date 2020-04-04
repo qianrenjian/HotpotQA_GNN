@@ -133,7 +133,7 @@ def main(args):
     train_state = make_train_state(args)
 
     try:
-        writer = SummaryWriter(log_dir=args.log_dir, flush_secs=args.flush_secs)
+        # writer = SummaryWriter(log_dir=args.log_dir, flush_secs=args.flush_secs)
         cursor_train = 0
         cursor_val = 0
         # for epoch_index in range(args.num_epochs):
@@ -234,13 +234,13 @@ def main(args):
                                         epoch=epoch_index)
                     train_bar.update()
                     
-                    writer.add_scalar('loss/train', loss.item(), cursor_train)
-                    writer.add_scalar('recall_t_sent/train', recall_t_sent, cursor_train)
-                    writer.add_scalar('recall_t_para/train', recall_t_para, cursor_train)
+                    # writer.add_scalar('loss/train', loss.item(), cursor_train)
+                    # writer.add_scalar('recall_t_sent/train', recall_t_sent, cursor_train)
+                    # writer.add_scalar('recall_t_para/train', recall_t_para, cursor_train)
 
-                    writer.add_scalar('running_acc_Qtype/train', running_acc_Qtype, cursor_train)
-                    writer.add_scalar('running_acc_topN/train', running_acc_topN, cursor_train)
-                    writer.add_scalar('running_loss/train', running_loss, cursor_train)
+                    # writer.add_scalar('running_acc_Qtype/train', running_acc_Qtype, cursor_train)
+                    # writer.add_scalar('running_acc_topN/train', running_acc_topN, cursor_train)
+                    # writer.add_scalar('running_loss/train', running_loss, cursor_train)
                     cursor_train += 1
 
                 train_state['train_running_loss'].append(running_loss)
@@ -313,18 +313,18 @@ def main(args):
                                         epoch=epoch_index)
                     val_bar.update()
                     
-                    writer.add_scalar('loss/val', loss.item(), cursor_val)
-                    writer.add_scalar('recall_t_sent/val', recall_t_sent, cursor_val)
-                    writer.add_scalar('recall_t_para/val', recall_t_para, cursor_val)
+                    # writer.add_scalar('loss/val', loss.item(), cursor_val)
+                    # writer.add_scalar('recall_t_sent/val', recall_t_sent, cursor_val)
+                    # writer.add_scalar('recall_t_para/val', recall_t_para, cursor_val)
 
-                    writer.add_scalar('running_acc_Qtype/val', running_acc_Qtype, cursor_val)
-                    writer.add_scalar('running_acc_topN/val', running_acc_topN, cursor_val)
-                    writer.add_scalar('running_loss/val', running_loss, cursor_val)
+                    # writer.add_scalar('running_acc_Qtype/val', running_acc_Qtype, cursor_val)
+                    # writer.add_scalar('running_acc_topN/val', running_acc_topN, cursor_val)
+                    # writer.add_scalar('running_loss/val', running_loss, cursor_val)
                     cursor_val += 1
 
 
                 train_state['val_running_loss'].append(running_loss)
-                writer.add_scalar('running_loss/val', running_loss, cursor_val)
+                # writer.add_scalar('running_loss/val', running_loss, cursor_val)
 
                 train_state = update_train_state(args=args, model=classifier, 
                                                 optimizer = optimizer,

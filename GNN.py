@@ -40,12 +40,6 @@ class GraphAttentionLayer(nn.Module):
         attention = F.dropout(attention, self.dropout, training=self.training)
         h_prime = torch.bmm(attention, h)  # (B, N, N)*(B, N ,out_features)        
 
-        if torch.isnan(h_prime).any():
-            print(index, h_prime.tolist())
-            # print(self.W)
-            # print(minimal_vec.tolist())
-            raise AssertionError
-
         if self.concat:
             return F.elu(h_prime)
         else:

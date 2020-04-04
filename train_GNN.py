@@ -102,6 +102,7 @@ def main(args):
     optimizer = optim.Adam(filter(lambda p: p.requires_grad, classifier.parameters()),
                         lr=args.learning_rate)
 
+    CUDA_NUM = torch.cuda.device_count()
     # Initialization
     opt_level = 'O1'
     if args.cuda:
@@ -160,7 +161,8 @@ def main(args):
                 running_acc_Qtype = 0.0
                 running_acc_topN = 0.0
 
-                classifier.train()
+                if CUDA_NUM <2: classifier.train()
+                else: classifier.module.train()
 
                 for batch_index, batch_dict in enumerate(batch_generator):
 

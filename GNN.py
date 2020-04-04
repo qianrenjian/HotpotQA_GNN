@@ -22,7 +22,6 @@ class GraphAttentionLayer(nn.Module):
 
     def forward(self, feat_matrix, adj):
         # features (B, N, dim) , adj (B, N, N)
-        print(feat_matrix.device, self.W.device)
         h = torch.matmul(feat_matrix, self.W) # (B,N,8)
                 
         N = h.shape[-2] # N
@@ -74,16 +73,7 @@ class GAT_HotpotQA(nn.Module):
         
         self.normal_layer = nn.BatchNorm1d(nodes_num) # 200 Node
     
-    def set_device(self,device):
-        for k in self._parameters.keys():
-            self._parameters[k] = self._parameters[k].to(device)
-
     def forward(self, feat_matrix, adj):
-        # feat_matrix = feat_matrix.to(self.W2.device)
-        # adj = adj.to(self.W2.device)
-
-        # self.set_device(self.W2.device)
-        # features (B, N, dim) , adj (B, N, N)
         feat_matrix = F.dropout(feat_matrix, self.dropout, training=self.training)
         feat_matrix = torch.cat([att(feat_matrix, adj) for att in self.attentions], dim=-1) # (B,N,hidden*heads)
         feat_matrix = F.dropout(self.normal_layer(feat_matrix), self.dropout, training=self.training)

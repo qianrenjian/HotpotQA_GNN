@@ -108,7 +108,7 @@ def main(args):
     if args.cuda:
         if args.fp16: classifier, optimizer = amp.initialize(classifier, optimizer, opt_level=opt_level)
         classifier = classifier.to(args.device)
-        classifier = nn.DataParallel(classifier)
+        classifier = BalancedDataParallel(classifier)
         # torch.distributed.init_process_group(backend="nccl")
         # classifier = nn.parallel.DistributedDataParallel(classifier)
 
@@ -161,9 +161,7 @@ def main(args):
                 running_acc_Qtype = 0.0
                 running_acc_topN = 0.0
 
-                # if CUDA_NUM <2: 
                 classifier.train()
-                # else: classifier.module.train()
 
                 for batch_index, batch_dict in enumerate(batch_generator):
 

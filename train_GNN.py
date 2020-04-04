@@ -108,7 +108,10 @@ def main(args):
     if args.cuda:
         classifier = classifier.to(args.device)
         if args.fp16: classifier, optimizer = amp.initialize(classifier, optimizer, opt_level=opt_level)
-        classifier = BalancedDataParallel(classifier)
+        classifier = BalancedDataParallel(args.gpu0_bsz // args.acc_grad, classifier, dim=0)
+
+        # classifier = nn.DataParallel(classifier)
+
         # torch.distributed.init_process_group(backend="nccl")
         # classifier = nn.parallel.DistributedDataParallel(classifier)
 

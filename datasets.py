@@ -234,13 +234,13 @@ def gen_GNN_batches(dataset, batch_size, shuffle=True, drop_last=True, device='c
         cursor += batch_size
         
         
-        feature_matrix = feature_matrix.to(device)
-        adj = adj.to(device).long()
-        sent_mask = sent_mask.to(device).long()
-        para_mask = para_mask.to(device).long()
-        labels = labels.to(device).long()
-        answer_type = answer_type.to(device).long()
-        ans_yes_no = ans_yes_no.to(device).long()
+        feature_matrix = feature_matrix.cuda()
+        adj = adj.long().cuda()
+        sent_mask = sent_mask.long().cuda()
+        para_mask = para_mask.long().cuda()
+        labels = labels.long().cuda()
+        answer_type = answer_type.long().cuda()
+        ans_yes_no = ans_yes_no.long().cuda()
         
         batch_item_info_dict = {
             'feature_matrix': feature_matrix,
@@ -551,11 +551,11 @@ def generate_QA_batches(dataset, batch_size, shuffle=True, drop_last=True, devic
         out_data_dict = {}
         for name, tensor in data_dict.items():
             if name in ['start_positions', 'end_positions', 'yes_no_span']:
-                out_data_dict[name] = data_dict[name].view(-1).to(device)
+                out_data_dict[name] = data_dict[name].view(-1)
             else:
                 # do it for permutations.
                 last_size = tensor.shape[-1] # seq len.
-                out_data_dict[name] = data_dict[name].view(-1, last_size).to(device)
+                out_data_dict[name] = data_dict[name].view(-1, last_size)
 
         yield out_data_dict
 

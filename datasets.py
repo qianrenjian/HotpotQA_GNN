@@ -228,19 +228,17 @@ def gen_GNN_batches(dataset, batch_size, shuffle=True, drop_last=True, device='c
                 answer_type = torch.cat([answer_type, res_dict['answer_type']], dim=-1)
                 ans_yes_no = torch.cat([ans_yes_no, res_dict['ans_yes_no']], dim=-1)
 
-
             sent_tokens.append(res_dict['sent_tokens'])
 
         cursor += batch_size
         
-        
-        feature_matrix = feature_matrix.cuda()
-        adj = adj.long().cuda()
-        sent_mask = sent_mask.long().cuda()
-        para_mask = para_mask.long().cuda()
-        labels = labels.long().cuda()
-        answer_type = answer_type.long().cuda()
-        ans_yes_no = ans_yes_no.long().cuda()
+        feature_matrix = feature_matrix.to(device)
+        adj = adj.long().to(device)
+        sent_mask = sent_mask.long().to(device)
+        para_mask = para_mask.long().to(device)
+        labels = labels.long().to(device)
+        answer_type = answer_type.long().to(device)
+        ans_yes_no = ans_yes_no.long().to(device)
         
         batch_item_info_dict = {
             'feature_matrix': feature_matrix,

@@ -76,7 +76,7 @@ def main(args):
     if not torch.cuda.is_available():
         args.cuda = False
     if not args.device:
-        args.device = torch.device("cuda" if args.cuda else "cpu")
+        args.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     if args.expand_filepaths_to_save_dir:
         args.model_state_file = os.path.join(args.save_dir,args.model_state_file)
     
@@ -106,7 +106,8 @@ def main(args):
     opt_level = 'O1'
     if args.cuda:
         if args.fp16: classifier, optimizer = amp.initialize(classifier, optimizer, opt_level=opt_level)
-        classifier = BalancedDataParallel(args.gpu0_bsz // args.acc_grad, classifier, dim=0).cuda()
+        classifier = BalancedDataParallel(args.gpu0_bsz // args.acc_grad, classifier, dim=0)
+        classifier = classifier.to(arg.device)
         # torch.distributed.init_process_group(backend="nccl")
         # classifier = nn.parallel.DistributedDataParallel(classifier)
 

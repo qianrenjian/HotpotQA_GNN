@@ -79,8 +79,12 @@ class GAT_HotpotQA(nn.Module):
             self._parameters[k] = self._parameters[k].to(device)
 
     def forward(self, feat_matrix, adj):
+        print(f"self.W2.device: {self.W2.device}")
         feat_matrix = feat_matrix.to(self.W2.device)
         adj = adj.to(self.W2.device)
+        print(f"feat_matrix.device: {feat_matrix.device}")
+        print(f"adj.device: {adj.device}")
+
         self.set_device(self.W2.device)
         # features (B, N, dim) , adj (B, N, N)
         feat_matrix = F.dropout(feat_matrix, self.dropout, training=self.training)
@@ -95,4 +99,5 @@ class GAT_HotpotQA(nn.Module):
 
 if __name__ == '__main__':
     model = GAT_HotpotQA().cuda()
-    print(model.W2.device)
+    print(model._parameters)
+    print(model._modules)

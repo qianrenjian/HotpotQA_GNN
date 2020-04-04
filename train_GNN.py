@@ -76,7 +76,7 @@ def compute_recall(logits, labels, mask):
 def set_envs(args):
     if args.fp16:
         torch.cuda.set_device(args.local_rank)
-        torch.distributed.init_process_group(backend='nccl')
+        torch.distributed.init_process_group(backend='nccl',init_method='env://', world_size=2)
     torch.backends.cudnn.benchmark = True
 
     if not torch.cuda.is_available():

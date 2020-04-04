@@ -22,6 +22,7 @@ class GraphAttentionLayer(nn.Module):
 
     def forward(self, feat_matrix, adj):
         # features (B, N, dim) , adj (B, N, N)
+        print(feat_matrix.device, self.W.device)
         h = torch.matmul(feat_matrix, self.W) # (B,N,8)
                 
         N = h.shape[-2] # N

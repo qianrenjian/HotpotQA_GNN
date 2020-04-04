@@ -75,6 +75,8 @@ class GAT_HotpotQA(nn.Module):
         
 
     def forward(self, feat_matrix, adj):
+        feat_matrix = feat_matrix.to(self.device)
+        adj = adj.to(self.device)
         # features (B, N, dim) , adj (B, N, N)
         feat_matrix = F.dropout(feat_matrix, self.dropout, training=self.training)
         feat_matrix = torch.cat([att(feat_matrix, adj) for att in self.attentions], dim=-1) # (B,N,hidden*heads)
@@ -85,3 +87,6 @@ class GAT_HotpotQA(nn.Module):
         logits_Qtype = F.elu(torch.matmul(self.out_att_Qtype(feat_matrix, adj)[:,0,:], self.W2)).view(-1,2)
         
         return logits_sent, logits_para, logits_Qtype # 前2个:[B, N, num_class] 最后:[B,2]
+
+if __name__ == '__main__':
+    model = GAT_HotpotQA()

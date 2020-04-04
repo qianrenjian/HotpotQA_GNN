@@ -85,7 +85,7 @@ def set_envs(args):
     torch.distributed.init_process_group(backend='nccl',
                                         init_method='env://')
     torch.backends.cudnn.benchmark = True
-    
+
     if not args.device:
         args.device = torch.device("cuda" if torch.cuda.is_available() and args.cuda else "cpu")
     if args.expand_filepaths_to_save_dir:
@@ -143,7 +143,6 @@ def main(args):
         # for epoch_index in range(args.num_epochs):
 
         for chunk_i in range(0, total_items, args.chunk_size):
-            if chunk_i < 200: continue
             dataset = HotpotQA_GNN_Dataset.build_dataset(hotpotQA_item_folder = args.hotpotQA_item_folder,
                                                         i_from = chunk_i, 
                                                         i_to = chunk_i+args.chunk_size,
@@ -164,8 +163,6 @@ def main(args):
                             position=1)
 
             for epoch_index in range(args.num_epochs):
-                # if epoch_index<5: continue
-
                 train_state['epoch_index'] = epoch_index
                 dataset.set_split('train')
                 batch_generator = gen_GNN_batches(dataset,
@@ -270,16 +267,9 @@ def main(args):
                         logits_sent, logits_para, logits_Qtype = \
                                         classifier(batch_dict['feature_matrix'], batch_dict['adj'])
                         
-                        # if epoch_index == 6 and batch_index == 1:
-                        #     print(logits_sent.tolist())
-                        #     print(logits_para.tolist())
-                        #     print(logits_Qtype.tolist())
-                        # topN sents
                         max_value, max_index = logits_sent.max(dim=-1) # max_index is predict class.
                         topN_sent_index_batch = (max_value * batch_dict['sent_mask'].squeeze()).topk(args.topN_sents, dim=-1)[1]
-                        # if epoch_index == 6 and batch_index == 1: print(topN_sent_index_batch)
                         topN_sent_predict = torch.gather(max_index, -1, topN_sent_index_batch)
-                        # if epoch_index == 6 and batch_index == 1: print(topN_sent_index_batch)
 
                         topN_sent_label = torch.gather((batch_dict['labels'] * batch_dict['sent_mask']).squeeze(),
                                                         -1, 
@@ -295,20 +285,10 @@ def main(args):
                         labels_para = (batch_dict['para_mask']*batch_dict['labels'] + \
                                     batch_dict['para_mask'].eq(0)*-100).view(-1)
 
-                        if epoch_index == 6 and batch_index == 1:
-                            print(logits_sent)
-                            print(labels_sent)
-
                         loss_sent = loss_func_sent(logits_sent, labels_sent) # [B,2] [B]
                         loss_para = loss_func_para(logits_para, labels_para) # [B,2] [B]
                         loss_Qtype = loss_func_Qtype(logits_Qtype.view(-1,2),
                                                     batch_dict['answer_type'].view(-1)) # [B,2] [B]
-
-                        if epoch_index >= 6:
-                            print(f"epoch_index: {epoch_index} batch_index: {batch_index}")
-                            print(f"loss_sent: {loss_sent}")
-                            print(f"loss_para: {loss_para}")
-                            print(f"loss_Qtype: {loss_Qtype}")
 
                         loss = loss_sent + loss_para + loss_Qtype
 

@@ -165,6 +165,7 @@ def main(args):
 
                     logits_sent, logits_para, logits_Qtype = \
                                     classifier(batch_dict['feature_matrix'], batch_dict['adj'])
+                    print(f"logits_sent: {logits_sent}")
 
                     # topN sents
                     max_value, max_index = logits_sent.max(dim=-1) # max_index is predict class.

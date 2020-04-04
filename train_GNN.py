@@ -366,7 +366,7 @@ def make_args():
     # Training hyper parameter
     parser.add_argument("--chunk_size",default=15000,type=int,help="remain")
     parser.add_argument("--num_epochs",default=3,type=int,help="remain")
-    parser.add_argument("--learning_rate",default=1e-3,type=int,help="remain")
+    parser.add_argument("--learning_rate",default=1e-3,type=float,help="remain")
     parser.add_argument("--batch_size",default=24,type=int,help="remain")
     parser.add_argument("--topN_sents",default=300,type=int,help="remain")
     parser.add_argument("--seed",default=0,type=int,help="remain")
@@ -378,7 +378,7 @@ def make_args():
     parser.add_argument("--hidden",default=64,type=int,help="remain")
     parser.add_argument("--nclass",default=2,type=int,help="remain")
     parser.add_argument("--dropout",default=0,type=int,help="remain")
-    parser.add_argument("--alpha",default=0.3,type=int,help="remain")
+    parser.add_argument("--alpha",default=0.3,type=float,help="remain")
     parser.add_argument("--nheads",default=8,type=int,help="remain",)
 
     # Runtime hyper parameter

@@ -75,8 +75,8 @@ class GAT_HotpotQA(nn.Module):
         self.normal_layer = nn.BatchNorm1d(nodes_num) # 200 Node
     
     def set_device(self,device):
-        for k in self._modules.keys():
-            self._modules[k] = self._modules[k].to(device)
+        for k in self._parameters.keys():
+            self._parameters[k] = self._parameters[k].to(device)
 
     def forward(self, feat_matrix, adj):
         feat_matrix = feat_matrix.to(self.W2.device)
@@ -94,5 +94,5 @@ class GAT_HotpotQA(nn.Module):
         return logits_sent, logits_para, logits_Qtype # 前2个:[B, N, num_class] 最后:[B,2]
 
 if __name__ == '__main__':
-    model = GAT_HotpotQA()
+    model = GAT_HotpotQA().cuda()
     print(model.W2.device)

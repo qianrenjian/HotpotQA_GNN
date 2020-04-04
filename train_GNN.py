@@ -105,14 +105,14 @@ def main(args):
     opt_level = 'O1'
     if args.cuda:
         classifier = classifier.cuda()
-        # classifier, optimizer = amp.initialize(classifier, optimizer, opt_level=opt_level)
+        if args.fp16: classifier, optimizer = amp.initialize(classifier, optimizer, opt_level=opt_level)
         classifier = nn.parallel.DistributedDataParallel(classifier)
 
     if args.reload_from_files:
         checkpoint = torch.load(args.model_state_file)
         classifier.load_state_dict(checkpoint['model'])
         optimizer.load_state_dict(checkpoint['optimizer'])
-        # amp.load_state_dict(checkpoint['amp'])
+        if args.fp16: amp.load_state_dict(checkpoint['amp'])
 
     scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer=optimizer,\
                                                     mode='min', factor=0.7, patience=30)
@@ -193,10 +193,11 @@ def main(args):
                     print(f"loss:{loss}")
                     running_loss += (loss.item() - running_loss) / (batch_index + 1)
 
-                    # with amp.scale_loss(loss, optimizer) as scaled_loss:
-                    #     scaled_loss.backward()
-                    
-                    loss.backward()
+                    if args.fp16:
+                        with amp.scale_loss(loss, optimizer) as scaled_loss:
+                            scaled_loss.backward()
+                    else:
+                        loss.backward()
 
                     optimizer.step()
                     scheduler.step(running_loss)
@@ -389,6 +390,7 @@ def make_args():
     parser.add_argument("--device",default=None,help="remain",)
     parser.add_argument("--reload_from_files", action="store_true", help="remain")
     parser.add_argument("--expand_filepaths_to_save_dir", action="store_true", help="remain")
+    parser.add_argument("--fp16", action="store_true", help="remain")
 
     # Data parallel setting
     parser.add_argument("--gpu0_bsz",default=6,type=int,help="remain",)

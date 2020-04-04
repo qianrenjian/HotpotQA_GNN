@@ -38,8 +38,8 @@ def update_train_state(args, model, optimizer, train_state):
         checkpoint = {
             'model': model.state_dict(),
             'optimizer': optimizer.state_dict(),
-            'amp': amp.state_dict()
         }
+        if args.fp16: checkpoint['amp'] = amp.state_dict()
         torch.save(checkpoint, train_state['model_filename'])
         
         train_state['stop_early'] = False
@@ -60,10 +60,10 @@ def update_train_state(args, model, optimizer, train_state):
                 checkpoint = {
                     'model': model.state_dict(),
                     'optimizer': optimizer.state_dict(),
-                    'amp': amp.state_dict(),
                     'cursor_train': train_state['cursor_train'],
                     'cursor_val': train_state['cursor_val'],
                 }
+                if args.fp16: checkpoint['amp'] = amp.state_dict()
                 torch.save(checkpoint, train_state['model_filename'])
 
                 train_state['early_stopping_best_val'] = loss_t

@@ -22,7 +22,6 @@ class GraphAttentionLayer(nn.Module):
 
     def forward(self, feat_matrix, adj):
         # features (B, N, dim) , adj (B, N, N)
-        print(feat_matrix.device, self.W.device)
         h = torch.matmul(feat_matrix, self.W) # (B,N,8)
                 
         N = h.shape[-2] # N
@@ -86,6 +85,35 @@ class GAT_HotpotQA(nn.Module):
         return logits_sent, logits_para, logits_Qtype # 前2个:[B, N, num_class] 最后:[B,2]
 
 if __name__ == '__main__':
-    model = GAT_HotpotQA().cuda()
-    print(model._parameters)
-    print(model._modules)
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    model = GAT_HotpotQA().to(device)
+    
+    def gen():
+        for i in range(10):
+            feat = torch.randn([7,200,768]).to(device)
+            adj = torch.randint(0, 2, [200,200]).to(device)
+            label = torch.randint(0, 2, [7,200]).to(device)
+            yield (feat, adj, label)
+
+    from apex import amp
+    from apex.parallel import DistributedDataParallel
+    
+    torch.cuda.set_device(0)
+    torch.distributed.init_process_group(backend='nccl',init_method='env://')
+    torch.backends.cudnn.benchmark = True
+
+    optimizer = torch.optim.SGD(model.parameters(), lr=1e-3)
+    model, optimizer = amp.initialize(model, optimizer, opt_level="O1")
+    model = DistributedDataParallel(model)
+    loss_fn = nn.CrossEntropyLoss()
+
+    for index,i in enumerate(gen()):
+        optimizer.zero_grad()
+        logits, _, _, = model(i[0], i[1])
+        loss = loss_fn(logits.view(-1, 2), i[2].view(-1))
+        with amp.scale_loss(loss, optimizer) as scaled_loss:
+            scaled_loss.backward()
+        print(index, loss)
+        optimizer.step()
+
+    print("final loss = ", loss)

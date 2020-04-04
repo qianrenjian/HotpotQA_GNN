@@ -144,7 +144,6 @@ def main(args):
                                                         i_to = chunk_i+args.chunk_size,
                                                         seed=args.seed+chunk_i)
             dataset.set_parameters(args.pad_max_num, args.pad_value)
-
             epoch_bar = tqdm(desc='training routine',
                             total=args.num_epochs,
                             position=0)
@@ -162,7 +161,6 @@ def main(args):
             for epoch_index in range(args.num_epochs):
 
                 train_state['epoch_index'] = epoch_index
-
                 dataset.set_split('train')
                 batch_generator = gen_GNN_batches(dataset,
                                                 batch_size=args.batch_size, 
@@ -172,9 +170,7 @@ def main(args):
                 running_acc_topN = 0.0
 
                 classifier.train()
-
                 for batch_index, batch_dict in enumerate(batch_generator):
-
                     optimizer.zero_grad()
 
                     logits_sent, logits_para, logits_Qtype = \
@@ -340,6 +336,8 @@ def main(args):
 
                 if train_state['stop_early']:
                     break
+
+        # all finished.
 
     except KeyboardInterrupt:
         print("Exiting loop")

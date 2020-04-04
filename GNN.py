@@ -73,12 +73,15 @@ class GAT_HotpotQA(nn.Module):
         nn.init.xavier_uniform_(self.W2.data, gain=1.414)
         
         self.normal_layer = nn.BatchNorm1d(nodes_num) # 200 Node
-        
+    
+    def set_device(self,device):
+        for k in self._modules.keys():
+            self._modules[k] = self._modules[k].to(device)
 
     def forward(self, feat_matrix, adj):
-        print(f"self.W2.device: {self.W2.device}")
         feat_matrix = feat_matrix.to(self.W2.device)
         adj = adj.to(self.W2.device)
+        self.set_device(self.W2.device)
         # features (B, N, dim) , adj (B, N, N)
         feat_matrix = F.dropout(feat_matrix, self.dropout, training=self.training)
         feat_matrix = torch.cat([att(feat_matrix, adj) for att in self.attentions], dim=-1) # (B,N,hidden*heads)

@@ -161,8 +161,9 @@ def main(args):
                 running_acc_Qtype = 0.0
                 running_acc_topN = 0.0
 
-                if CUDA_NUM <2: classifier.train()
-                else: classifier.module.train()
+                # if CUDA_NUM <2: 
+                classifier.train()
+                # else: classifier.module.train()
 
                 for batch_index, batch_dict in enumerate(batch_generator):
 

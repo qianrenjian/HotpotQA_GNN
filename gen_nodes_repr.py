@@ -241,30 +241,12 @@ def make_args():
             )
     
     # train setting.
-    parser.add_argument(
-        "--device",
-        default='cuda:0',
-        type=str,
-        help="remain",
-            )
-    parser.add_argument(
-        "--start",
-        default=0,
-        type=int,
-        help="remain",
-            )
-    parser.add_argument(
-        "--end",
-        default=100,
-        type=int,
-        help="remain",
-            )
-    parser.add_argument(
-        "--spacy_model",
-        default="en_core_web_sm",
-        type=str,
-        help="remain",
-            )
+    parser.add_argument("--device",default='cuda:0',type=str,help="remain",)
+    parser.add_argument("--start",default=0,type=int,help="remain",)
+    parser.add_argument("--end",default=100,type=int,help="remain",)
+    parser.add_argument("--split_num",default=50,type=int,help="remain",)
+    parser.add_argument("--spacy_model",default="en_core_web_sm",type=str,help="remain",)
+
     args = parser.parse_args()
     return args
 
@@ -281,20 +263,16 @@ if __name__ == '__main__':
     model = AutoModel.from_pretrained(args.model_path, local_files_only=True)
     model = model.to(args.device)
 
-    save_in_steps(json_train=json_train, model=model, start = args.start, end = args.end)
+    save_in_steps(json_train=json_train, model=model, start = args.start, end = args.end, split_num=args.split_num)
 
 """
 test:
-
 python gen_nodes_repr.py --device cuda:0 --start 0 --end 5 --model_path data/models/roberta-base --save_dir save_node_repr_roberta --spacy_model en_core_web_sm
 
-
 formal:
-
-python gen_nodes_repr.py --device cuda:0 --start 0 --end 10000 --model_path data/models/xlnet-large-cased --save_dir save_node_repr_xlnet-large-cased --spacy_model en_core_web_lg
-python gen_nodes_repr.py --device cuda:1 --start 10000 --end 20000 --model_path data/models/xlnet-large-cased --save_dir save_node_repr_xlnet-large-cased --spacy_model en_core_web_lg
-python gen_nodes_repr.py --device cuda:2 --start 20000 --end 30000 --model_path data/models/xlnet-large-cased --save_dir save_node_repr_xlnet-large-cased --spacy_model en_core_web_lg
-python gen_nodes_repr.py --device cuda:3 --start 30000 --end 40000 --model_path data/models/xlnet-large-cased --save_dir save_node_repr_xlnet-large-cased --spacy_model en_core_web_lg
-
+python gen_nodes_repr.py --device cuda:0 --start 0 --end 10000 --split_num 200 --model_path data/models/xlnet-large-cased --save_dir save_node_repr_xlnet-large-cased --spacy_model en_core_web_lg
+python gen_nodes_repr.py --device cuda:1 --start 10000 --end 20000 --split_num 200 --model_path data/models/xlnet-large-cased --save_dir save_node_repr_xlnet-large-cased --spacy_model en_core_web_lg
+python gen_nodes_repr.py --device cuda:2 --start 20000 --end 30000 --split_num 200 --model_path data/models/xlnet-large-cased --save_dir save_node_repr_xlnet-large-cased --spacy_model en_core_web_lg
+python gen_nodes_repr.py --device cuda:3 --start 30000 --end 40000 --split_num 200 --model_path data/models/xlnet-large-cased --save_dir save_node_repr_xlnet-large-cased --spacy_model en_core_web_lg
 """
 

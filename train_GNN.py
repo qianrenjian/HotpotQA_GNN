@@ -105,14 +105,14 @@ def main(args):
     opt_level = 'O1'
     if args.cuda:
         classifier = classifier.cuda()
-        classifier, optimizer = amp.initialize(classifier, optimizer, opt_level=opt_level)
+        # classifier, optimizer = amp.initialize(classifier, optimizer, opt_level=opt_level)
         classifier = nn.parallel.DistributedDataParallel(classifier)
 
     if args.reload_from_files:
         checkpoint = torch.load(args.model_state_file)
         classifier.load_state_dict(checkpoint['model'])
         optimizer.load_state_dict(checkpoint['optimizer'])
-        amp.load_state_dict(checkpoint['amp'])
+        # amp.load_state_dict(checkpoint['amp'])
 
     scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer=optimizer,\
                                                     mode='min', factor=0.7, patience=30)
@@ -193,8 +193,10 @@ def main(args):
                     print(f"loss:{loss}")
                     running_loss += (loss.item() - running_loss) / (batch_index + 1)
 
-                    with amp.scale_loss(loss, optimizer) as scaled_loss:
-                        scaled_loss.backward()
+                    # with amp.scale_loss(loss, optimizer) as scaled_loss:
+                    #     scaled_loss.backward()
+                    
+                    loss.backward()
 
                     optimizer.step()
                     scheduler.step(running_loss)
@@ -378,13 +380,13 @@ def make_args():
     parser.add_argument("--features",default=768,type=int,help="remain")
     parser.add_argument("--hidden",default=64,type=int,help="remain")
     parser.add_argument("--nclass",default=2,type=int,help="remain")
-    parser.add_argument("--dropout",default=0,type=int,help="remain")
+    parser.add_argument("--dropout",default=0,type=float,help="remain")
     parser.add_argument("--alpha",default=0.3,type=float,help="remain")
     parser.add_argument("--nheads",default=8,type=int,help="remain",)
 
     # Runtime hyper parameter
     parser.add_argument("--cuda", action="store_true", help="remain")
-    parser.add_argument("--device",default=None,type=str,help="remain",)
+    parser.add_argument("--device",default=None,help="remain",)
     parser.add_argument("--reload_from_files", action="store_true", help="remain")
     parser.add_argument("--expand_filepaths_to_save_dir", action="store_true", help="remain")
 

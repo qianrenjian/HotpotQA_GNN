@@ -254,6 +254,9 @@ def gen_GNN_batches(dataset, batch_size, shuffle=True, drop_last=True, device='c
             'answer_tokens': answer_tokens,
             'sent_tokens': sent_tokens,
         }
+        for k,v in batch_item_info_dict.items():
+            assert type(v)==list or not torch.isnan(v).any()
+
         yield batch_item_info_dict
 
 class HotpotQA_QA_Dataset(Dataset):

@@ -4,6 +4,7 @@ from argparse import Namespace
 import argparse
 import time
 from traceback import print_exc
+from collections import defaultdict
 
 import torch
 import torch.nn as nn
@@ -77,13 +78,16 @@ def set_envs(args):
         args.cuda = False
         args.fp16 = False
 
-    if args.fp16:
-        torch.cuda.set_device(args.local_rank)
-        torch.distributed.init_process_group(backend='nccl',
-                                         init_method='env://')
+    if 'CUDA_VISIBLE_DEVICES' in os.environ.keys():
+        args.device_ids = eval(f"[{os.environ['CUDA_VISIBLE_DEVICES']}]")
+
+    torch.cuda.set_device(args.local_rank)
+    torch.distributed.init_process_group(backend='nccl',
+                                        init_method='env://')
     torch.backends.cudnn.benchmark = True
+    
     if not args.device:
-        args.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        args.device = torch.device("cuda" if torch.cuda.is_available() and args.cuda else "cpu")
     if args.expand_filepaths_to_save_dir:
         args.model_state_file = os.path.join(args.save_dir,args.model_state_file)
     set_seed_everywhere(args.seed, args.cuda)
@@ -117,11 +121,11 @@ def main(args):
         classifier = classifier.to(args.device)
         if args.fp16:
             classifier, optimizer = amp.initialize(classifier, optimizer, opt_level=opt_level)
-            classifier = DistributedDataParallel(classifier)
-        else:
-            classifier = nn.DataParallel(classifier)
-            # classifier = nn.parallel.DistributedDataParallel(classifier)
-
+        classifier = nn.parallel.DistributedDataParallel(classifier,
+                                                        device_ids=args.device_ids, 
+                                                        output_device=0, 
+                                                        find_unused_parameters=True)
+        
     if args.reload_from_files:
         checkpoint = torch.load(args.model_state_file)
         classifier.load_state_dict(checkpoint['model'])
@@ -133,12 +137,13 @@ def main(args):
     train_state = make_train_state(args)
 
     try:
-        # writer = SummaryWriter(log_dir=args.log_dir, flush_secs=args.flush_secs)
+        writer = SummaryWriter(log_dir=args.log_dir, flush_secs=args.flush_secs)
         cursor_train = 0
         cursor_val = 0
         # for epoch_index in range(args.num_epochs):
 
         for chunk_i in range(0, total_items, args.chunk_size):
+            if chunk_i < 200: continue
             dataset = HotpotQA_GNN_Dataset.build_dataset(hotpotQA_item_folder = args.hotpotQA_item_folder,
                                                         i_from = chunk_i, 
                                                         i_to = chunk_i+args.chunk_size,
@@ -159,6 +164,7 @@ def main(args):
                             position=1)
 
             for epoch_index in range(args.num_epochs):
+                # if epoch_index<5: continue
 
                 train_state['epoch_index'] = epoch_index
                 dataset.set_split('train')
@@ -230,17 +236,17 @@ def main(args):
 
 
                     # update bar
-                    train_bar.set_postfix(loss=running_loss,
-                                        epoch=epoch_index)
-                    train_bar.update()
+                    # train_bar.set_postfix(loss=running_loss,epoch=epoch_index)
+                    # train_bar.update()
                     
-                    # writer.add_scalar('loss/train', loss.item(), cursor_train)
-                    # writer.add_scalar('recall_t_sent/train', recall_t_sent, cursor_train)
-                    # writer.add_scalar('recall_t_para/train', recall_t_para, cursor_train)
+                    writer.add_scalar('loss/train', loss.item(), cursor_train)
+                    writer.add_scalar('recall_t_sent/train', recall_t_sent, cursor_train)
+                    writer.add_scalar('recall_t_para/train', recall_t_para, cursor_train)
 
-                    # writer.add_scalar('running_acc_Qtype/train', running_acc_Qtype, cursor_train)
-                    # writer.add_scalar('running_acc_topN/train', running_acc_topN, cursor_train)
-                    # writer.add_scalar('running_loss/train', running_loss, cursor_train)
+                    writer.add_scalar('running_acc_Qtype/train', running_acc_Qtype, cursor_train)
+                    writer.add_scalar('running_acc_topN/train', running_acc_topN, cursor_train)
+                    writer.add_scalar('running_loss/train', running_loss, cursor_train)
+
                     cursor_train += 1
 
                 train_state['train_running_loss'].append(running_loss)
@@ -263,11 +269,18 @@ def main(args):
 
                         logits_sent, logits_para, logits_Qtype = \
                                         classifier(batch_dict['feature_matrix'], batch_dict['adj'])
-
+                        
+                        # if epoch_index == 6 and batch_index == 1:
+                        #     print(logits_sent.tolist())
+                        #     print(logits_para.tolist())
+                        #     print(logits_Qtype.tolist())
                         # topN sents
                         max_value, max_index = logits_sent.max(dim=-1) # max_index is predict class.
                         topN_sent_index_batch = (max_value * batch_dict['sent_mask'].squeeze()).topk(args.topN_sents, dim=-1)[1]
+                        # if epoch_index == 6 and batch_index == 1: print(topN_sent_index_batch)
                         topN_sent_predict = torch.gather(max_index, -1, topN_sent_index_batch)
+                        # if epoch_index == 6 and batch_index == 1: print(topN_sent_index_batch)
+
                         topN_sent_label = torch.gather((batch_dict['labels'] * batch_dict['sent_mask']).squeeze(),
                                                         -1, 
                                                         topN_sent_index_batch)
@@ -282,13 +295,30 @@ def main(args):
                         labels_para = (batch_dict['para_mask']*batch_dict['labels'] + \
                                     batch_dict['para_mask'].eq(0)*-100).view(-1)
 
+                        if epoch_index == 6 and batch_index == 1:
+                            print(logits_sent)
+                            print(labels_sent)
+
                         loss_sent = loss_func_sent(logits_sent, labels_sent) # [B,2] [B]
                         loss_para = loss_func_para(logits_para, labels_para) # [B,2] [B]
                         loss_Qtype = loss_func_Qtype(logits_Qtype.view(-1,2),
                                                     batch_dict['answer_type'].view(-1)) # [B,2] [B]
 
+                        if epoch_index >= 6:
+                            print(f"epoch_index: {epoch_index} batch_index: {batch_index}")
+                            print(f"loss_sent: {loss_sent}")
+                            print(f"loss_para: {loss_para}")
+                            print(f"loss_Qtype: {loss_Qtype}")
+
                         loss = loss_sent + loss_para + loss_Qtype
-                        running_loss += (loss.item() - running_loss) / (batch_index + 1)
+
+                        try:
+                            running_loss += (loss.item() - running_loss) / (batch_index + 1)
+                        except RuntimeError:
+                            print(f"err batch: {batch_index}")
+
+                            print_exc()
+                            exit()
 
                     # compute the recall
                     recall_t_sent = compute_recall(logits_sent.view(-1,2), 
@@ -309,22 +339,20 @@ def main(args):
 
 
                     # update bar
-                    val_bar.set_postfix(loss=running_loss,
-                                        epoch=epoch_index)
+                    val_bar.set_postfix(loss=running_loss,epoch=epoch_index)
                     val_bar.update()
-                    
-                    # writer.add_scalar('loss/val', loss.item(), cursor_val)
-                    # writer.add_scalar('recall_t_sent/val', recall_t_sent, cursor_val)
-                    # writer.add_scalar('recall_t_para/val', recall_t_para, cursor_val)
 
-                    # writer.add_scalar('running_acc_Qtype/val', running_acc_Qtype, cursor_val)
-                    # writer.add_scalar('running_acc_topN/val', running_acc_topN, cursor_val)
-                    # writer.add_scalar('running_loss/val', running_loss, cursor_val)
+                    writer.add_scalar('loss/val', loss.item(), cursor_val)
+                    writer.add_scalar('recall_t_sent/val', recall_t_sent, cursor_val)
+                    writer.add_scalar('recall_t_para/val', recall_t_para, cursor_val)
+
+                    writer.add_scalar('running_acc_Qtype/val', running_acc_Qtype, cursor_val)
+                    writer.add_scalar('running_acc_topN/val', running_acc_topN, cursor_val)
+                    writer.add_scalar('running_loss/val', running_loss, cursor_val)
                     cursor_val += 1
 
 
                 train_state['val_running_loss'].append(running_loss)
-                # writer.add_scalar('running_loss/val', running_loss, cursor_val)
 
                 train_state = update_train_state(args=args, model=classifier, 
                                                 optimizer = optimizer,
@@ -337,8 +365,12 @@ def main(args):
                 if train_state['stop_early']:
                     break
 
-        # all finished.
+                # epoch done.
+                # break
 
+            # chunk done.
+
+        # all finished.
     except KeyboardInterrupt:
         print("Exiting loop")
     except :
@@ -379,14 +411,14 @@ def make_args():
     parser.add_argument("--pad_value",default=0,type=int,help="remain")
 
     # Training hyper parameter
-    parser.add_argument("--chunk_size",default=15000,type=int,help="remain")
+    parser.add_argument("--chunk_size",default=100,type=int,help="remain")
     parser.add_argument("--num_epochs",default=3,type=int,help="remain")
     parser.add_argument("--learning_rate",default=1e-3,type=float,help="remain")
-    parser.add_argument("--batch_size",default=24,type=int,help="remain")
+    parser.add_argument("--batch_size",default=12,type=int,help="remain")
     parser.add_argument("--topN_sents",default=3,type=int,help="remain")
-    parser.add_argument("--seed",default=0,type=int,help="remain")
-    parser.add_argument("--early_stopping_criteria",default=300,type=int,help="remain")
-    parser.add_argument("--flush_secs",default=0,type=int,help="remain")
+    parser.add_argument("--seed",default=123,type=int,help="remain")
+    parser.add_argument("--early_stopping_criteria",default=5,type=int,help="remain")
+    parser.add_argument("--flush_secs",default=60,type=int,help="remain")
 
     # GNN parameters
     parser.add_argument("--features",default=768,type=int,help="remain")
@@ -404,18 +436,15 @@ def make_args():
     parser.add_argument("--fp16", action="store_true", help="remain")
 
     # Data parallel setting
-    parser.add_argument("--gpu0_bsz",default=6,type=int,help="remain",)
-    parser.add_argument("--acc_grad",default=1,type=int,help="remain",)
     parser.add_argument('--local_rank', metavar='int', type=int, default=0, help='rank')
     parser.add_argument("--dbp_port",default=23456,type=int,help="remain",)
-    parser.add_argument("--visible_devices",default=None,type=str,help="remain",)
+    parser.add_argument("--device_ids",default=[0],type=list,help="remain",)
 
     args = parser.parse_args()
     return args
 
 if __name__ == '__main__':
     args = make_args()
-    if args.visible_devices: os.environ['CUDA_VISIBLE_DEVICES'] = args.visible_devices
     main(args)
 
 """
@@ -426,6 +455,5 @@ python -m torch.distributed.launch train_GNN.py --cuda --expand_filepaths_to_sav
     --save_dir save_cache_GNN \
     --hotpotQA_item_folder save_preprocess_new \
     --log_dir parallel_runs_GNN/hidden64_heads8_pad300_chunk_first \
-    --visible_devices 0,1
     --chunk_size 100
 """

@@ -441,11 +441,9 @@ def make_args():
     parser.add_argument("--adam_epsilon",default=1e-8,type=float,help="remain",)
 
     # Data parallel setting
-    parser.add_argument("--gpu0_bsz",default=6,type=int,help="remain",)
-    parser.add_argument("--acc_grad",default=1,type=int,help="remain",)
     parser.add_argument('--local_rank', metavar='int', type=int, dest='rank', default=0, help='rank')
     parser.add_argument("--dbp_port",default=23456,type=int,help="remain",)
-    parser.add_argument("--visible_devices",default='0',type=str,help="remain",)
+    parser.add_argument("--device_ids",default=[0],type=list,help="remain",)
 
     # Runtime hyper parameter
     parser.add_argument("--cuda", action="store_true", help="remain")

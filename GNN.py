@@ -78,9 +78,7 @@ class GAT_HotpotQA(nn.Module):
         assert not torch.isnan(feat_matrix).any()
         feat_matrix = F.dropout(feat_matrix, self.dropout, training=self.training)
         feat_matrix = torch.cat([att(feat_matrix, adj, index) for index,att in enumerate(self.attentions)], dim=-1) # (B,N,hidden*heads)
-        # print(2,feat_matrix)
         feat_matrix = F.dropout(self.normal_layer(feat_matrix), self.dropout, training=self.training)
-        # print(3,feat_matrix)
         
         logits_sent = torch.sigmoid(self.out_att_sent(feat_matrix, adj, -2))
         logits_para = F.elu(self.out_att_para(feat_matrix, adj, -3))

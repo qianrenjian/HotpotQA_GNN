@@ -8,7 +8,7 @@ import argparse
 import torch
 import torch.nn as nn
 import numpy as np
-import ujson as json
+import json
 from tqdm import tqdm
 from transformers import AutoModel, AutoTokenizer
 

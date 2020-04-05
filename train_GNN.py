@@ -8,16 +8,12 @@ from collections import defaultdict
 
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
 import torch.optim as optim
 from torch.utils.data import Dataset
 from torch.utils.tensorboard import SummaryWriter
 
-import numpy as np
-import scipy.sparse as sp
-import ujson as json
 from tqdm import tqdm
-from transformers import AutoConfig, AutoModel, AutoTokenizer
+from transformers import AutoModel, AutoTokenizer
 from apex import amp
 from apex.parallel import DistributedDataParallel
 
@@ -234,8 +230,8 @@ def main(args):
 
 
                     # update bar
-                    # train_bar.set_postfix(loss=running_loss,epoch=epoch_index)
-                    # train_bar.update()
+                    train_bar.set_postfix(loss=running_loss,epoch=epoch_index)
+                    train_bar.update()
                     
                     writer.add_scalar('loss/train', loss.item(), cursor_train)
                     writer.add_scalar('recall_t_sent/train', recall_t_sent, cursor_train)
@@ -297,7 +293,6 @@ def main(args):
                             running_loss += (loss.item() - running_loss) / (batch_index + 1)
                         except RuntimeError:
                             print(f"err batch: {batch_index}")
-
                             print_exc()
                             exit()
 
@@ -343,14 +338,11 @@ def main(args):
                 val_bar.n = 0
                 epoch_bar.update()
 
-                if train_state['stop_early']:
-                    break
+                # if train_state['stop_early']:
+                #     break
 
                 # epoch done.
-                # break
-
             # chunk done.
-
         # all finished.
     except KeyboardInterrupt:
         print("Exiting loop")

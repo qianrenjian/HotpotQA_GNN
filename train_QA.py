@@ -13,7 +13,6 @@ from torch.utils.tensorboard import SummaryWriter
 import numpy as np
 import scipy.sparse as sp
 
-import ujson as json
 from tqdm import tqdm
 from transformers import AutoTokenizer, AdamW
 from apex import amp

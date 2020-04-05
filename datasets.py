@@ -8,7 +8,7 @@ import torch.nn as nn
 from torch.utils.data import Dataset, DataLoader
 import numpy as np
 
-import ujson as json
+import json
 from tqdm import tqdm
 
 from Nodes import Adjacency_sp, auto_reload_Node
@@ -44,7 +44,7 @@ class HotpotQA_GNN_Dataset(Dataset):
         hotpotQA_item_list = [HotpotQA_GNN_Dataset._rebuild(path) \
                               for path in tqdm(hotpotQA_item_path_list[i_from:i_to], 
                                                desc = f"loading {i_from}~{i_to}")]
-                            
+        hotpotQA_item_list = [i for i in hotpotQA_item_list if i != None]              
         np.random.seed(seed)
         np.random.shuffle(hotpotQA_item_list)        
         
@@ -57,9 +57,11 @@ class HotpotQA_GNN_Dataset(Dataset):
 
     @staticmethod
     def _rebuild(path):
-        with open(path, 'r', encoding = 'utf-8') as fp:
-            QA_item = json.load(fp)
-            
+        try:
+            with open(path, 'r', encoding = 'utf-8') as fp:
+                QA_item = json.load(fp)
+        except:
+            return None
         QA_item['node_list'] = [auto_reload_Node(state_dicts) for state_dicts in QA_item['node_list']]
         QA_item['sp_adj'] = Adjacency_sp.from_serializable(QA_item['sp_adj'])
         return QA_item

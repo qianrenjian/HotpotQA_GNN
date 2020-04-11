@@ -16,7 +16,7 @@ import scipy.sparse as sp
 from tqdm import tqdm
 from transformers import AutoTokenizer, AdamW
 from apex import amp
-from apex.parallel import DistributedDataParallel
+# from apex.parallel import DistributedDataParallel
 
 from datasets import HotpotQA_QA_Dataset, find_ans_spans, generate_QA_batches
 from QA_models import AutoQuestionAnswering
@@ -70,13 +70,13 @@ def set_envs(args):
         args.cuda = False
         args.fp16 = False
 
-    if 'CUDA_VISIBLE_DEVICES' in os.environ.keys():
-        args.device_ids = eval(f"[{os.environ['CUDA_VISIBLE_DEVICES']}]")
+    # if 'CUDA_VISIBLE_DEVICES' in os.environ.keys():
+    #     args.device_ids = eval(f"[{os.environ['CUDA_VISIBLE_DEVICES']}]")
 
-    torch.cuda.set_device(args.local_rank)
-    torch.distributed.init_process_group(backend='nccl',
-                                        init_method='env://')
-    torch.backends.cudnn.benchmark = True
+    # torch.cuda.set_device(args.local_rank)
+    # torch.distributed.init_process_group(backend='nccl',
+    #                                     init_method='env://')
+    # torch.backends.cudnn.benchmark = True
 
     if not args.device:
         args.device = torch.device("cuda" if torch.cuda.is_available() and args.cuda else "cpu")
@@ -154,10 +154,10 @@ def main(args):
         classifier = classifier.to(args.device)
         if args.fp16:
             classifier, optimizer = amp.initialize(classifier, optimizer, opt_level=opt_level)
-        classifier = nn.parallel.DistributedDataParallel(classifier,
-                                                        device_ids=args.device_ids, 
-                                                        output_device=0, 
-                                                        find_unused_parameters=True)
+        # classifier = nn.parallel.DistributedDataParallel(classifier,
+        #                                                 device_ids=args.device_ids, 
+        #                                                 output_device=0, 
+        #                                                 find_unused_parameters=True)
 
     if args.reload_from_files:
         checkpoint = torch.load(args.model_state_file)

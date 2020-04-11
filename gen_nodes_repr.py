@@ -197,14 +197,18 @@ def build_save_nodes_feat(index_item, model, test_mode = False):
 
         return (index,ques_item)
     except:
-        # print(index_item)
+        print(index_item)
         print_exc()
+        return None
 
 def save_in_steps(json_train, model, split_num = 200, start = 0, end = 1000):
     hotpotQA_preprocess_cls = []
     for index,item in enumerate(tqdm(json_train[start:end])):
         if os.path.exists(f"{args.save_dir}/{item['_id']}.json"): continue
         i = build_save_nodes_feat(index_item = (index + start + 1, process(item)), model=model)
+        if not i: 
+            print(f"err id: {item['_id']}")
+            continue
         hotpotQA_preprocess_cls.append(i[1])
         if i[0] % split_num == 0:
             

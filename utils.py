@@ -4,7 +4,6 @@ import torch
 from apex import amp
 from torch.optim.lr_scheduler import LambdaLR
 
-
 def set_seed_everywhere(seed, cuda):
     np.random.seed(seed)
     torch.manual_seed(seed)
@@ -30,7 +29,7 @@ def make_train_state(args):
             'test_running_loss': [],
             
             'model_filename': args.model_state_file,
-}
+    }
 
 def update_train_state(args, model, optimizer, train_state):
     # Save one model at least
@@ -87,6 +86,6 @@ def get_linear_schedule_with_warmup(optimizer, num_warmup_steps, num_training_st
             return float(current_step) / float(max(1, num_warmup_steps))
         return max(
             0.0, float(num_training_steps - current_step) / float(max(1, num_training_steps - num_warmup_steps))
-        )
+            )
 
     return LambdaLR(optimizer, lr_lambda, last_epoch)

@@ -27,7 +27,8 @@ class PoolerStartLogits_GRU(nn.Module):
                 invalid position mask such as query and special symbols (PAD, SEP, CLS)
                 1.0 means token should be masked.
         """
-        x = self.activation(self.BiGRU(hidden_states)[0])
+        res = self.BiGRU(hidden_states)
+        x = self.activation(res[0])
         x = self.activation(hidden_states + self.dense_0(x))
         x = self.dense_1(x).squeeze(-1)
 

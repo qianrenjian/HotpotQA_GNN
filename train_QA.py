@@ -16,6 +16,7 @@ import scipy.sparse as sp
 from tqdm import tqdm
 from transformers import AutoTokenizer, AdamW
 from apex import amp
+from apex.parallel import DistributedDataParallel
 
 from datasets import HotpotQA_QA_Dataset, find_ans_spans, generate_QA_batches
 from QA_models import AutoQuestionAnswering
@@ -67,15 +68,26 @@ from traceback import print_exc
 def set_envs(args):
     if not torch.cuda.is_available():
         args.cuda = False
+        args.fp16 = False
+
+    if 'CUDA_VISIBLE_DEVICES' in os.environ.keys():
+        args.device_ids = eval(f"[{os.environ['CUDA_VISIBLE_DEVICES']}]")
+
+    torch.cuda.set_device(args.local_rank)
+    torch.distributed.init_process_group(backend='nccl',
+                                        init_method='env://')
+    torch.backends.cudnn.benchmark = True
+
     if not args.device:
-        args.device = torch.device("cuda" if args.cuda else "cpu")
+        args.device = torch.device("cuda" if torch.cuda.is_available() and args.cuda else "cpu")
     if args.expand_filepaths_to_save_dir:
-        args.model_state_file = os.path.join(args.save_dir, args.model_state_file)
+        args.model_state_file = os.path.join(args.save_dir,args.model_state_file)
+    set_seed_everywhere(args.seed, args.cuda)
+    handle_dirs(args.save_dir)
+    
     if args.use_mini:
         args.json_train_path = args.json_train_mini_path
         args.log_dir = 'runs_mini'
-    set_seed_everywhere(args.seed, args.cuda)
-    handle_dirs(args.save_dir)
     if args.colab:
         args.json_train_path = os.path.join(args.colab_data_path, args.json_train_path)
         args.json_train_mini_path = os.path.join(args.colab_data_path, args.json_train_mini_path)
@@ -120,7 +132,6 @@ def main(args):
     classifier = AutoQuestionAnswering.from_pretrained(model_path=args.pretrained_model_path,
                                                         cls_index=tokenizer.cls_token_id)
     classifier.freeze_to_layer_by_name(args.freeze_layer_name)
-    # classifier = BalancedDataParallel(args.gpu0_bsz // args.acc_grad, classifier, dim=0).to(args.device)
     classifier.train()
 
     loss_fct = nn.CrossEntropyLoss(ignore_index=-100)
@@ -141,9 +152,13 @@ def main(args):
     # Initialization
     opt_level = 'O1'
     if args.cuda:
-        classifier = classifier.cuda()
-        classifier, optimizer = amp.initialize(classifier, optimizer, opt_level=opt_level)
-        classifier = nn.parallel.DistributedDataParallel(classifier)
+        classifier = classifier.to(args.device)
+        if args.fp16:
+            classifier, optimizer = amp.initialize(classifier, optimizer, opt_level=opt_level)
+        classifier = nn.parallel.DistributedDataParallel(classifier,
+                                                        device_ids=args.device_ids, 
+                                                        output_device=0, 
+                                                        find_unused_parameters=True)
 
     if args.reload_from_files:
         checkpoint = torch.load(args.model_state_file)
@@ -162,7 +177,7 @@ def main(args):
     scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer=optimizer,
                             mode='min',
                             factor=0.7,
-                            patience=dataset.get_num_batches(args.batch_size)/50)
+                            patience=dataset.get_num_batches(args.batch_size)/10)
     # scheduler = get_linear_schedule_with_warmup(
     #     optimizer,
     #     num_warmup_steps=args.warmup_steps,
@@ -170,8 +185,7 @@ def main(args):
     # )
 
     try:
-        writer = SummaryWriter(log_dir=args.log_dir,
-                                flush_secs=args.flush_secs)
+        writer = SummaryWriter(log_dir=args.log_dir,flush_secs=args.flush_secs)
         epoch_bar = tqdm(desc='training routine',
                         total=args.num_epochs,
                         position=0)
@@ -253,7 +267,7 @@ def main(args):
                                         (yes_no_span_accuracy - running_yes_no_span_accuracy) / (batch_index_for_yesnospan + 1)
                     batch_index_for_yesnospan += 1
                 
-                if args.cuda:
+                if args.fp16:
                     with amp.scale_loss(loss, optimizer) as scaled_loss:
                         scaled_loss.backward()
                 else:
@@ -262,8 +276,7 @@ def main(args):
                 scheduler.step(running_loss)  # Update learning rate schedule
                 
                 # update bar               
-                train_bar.set_postfix(running_loss=running_loss,
-                                    epoch=epoch_index)
+                train_bar.set_postfix(running_loss=running_loss,epoch=epoch_index)
                 train_bar.update()
 
                 writer.add_scalar('loss/train', loss.item(), cursor_train)
@@ -323,8 +336,7 @@ def main(args):
                                             (yes_no_span_accuracy - running_yes_no_span_accuracy) / (batch_index_for_yesnospan + 1)
                         batch_index_for_yesnospan += 1
 
-                val_bar.set_postfix(running_loss=running_loss,
-                                    epoch=epoch_index)
+                val_bar.set_postfix(running_loss=running_loss,epoch=epoch_index)
                 val_bar.update()
 
                 writer.add_scalar('loss/val', loss.item(), cursor_val)
@@ -346,14 +358,14 @@ def main(args):
                                                 optimizer = optimizer,
                                                 train_state=train_state)
 
-            # scheduler.step(train_state['train_running_loss'][-1])
-
             train_bar.n = 0
             val_bar.n = 0
             epoch_bar.update()
 
             if train_state['stop_early']:
+                print('STOP EARLY!')
                 break
+
     except KeyboardInterrupt:
         print("Exiting loop")
         os.remove(args.log_dir)
@@ -439,30 +451,30 @@ def make_args():
     parser.add_argument("--weight_decay",default=0.01,type=float,help="remain",)
     parser.add_argument("--adam_epsilon",default=1e-8,type=float,help="remain",)
 
-    # Data parallel setting
-    parser.add_argument('--local_rank', metavar='int', type=int, dest='rank', default=0, help='rank')
-    parser.add_argument("--dbp_port",default=23456,type=int,help="remain",)
-    parser.add_argument("--device_ids",default=[0],type=list,help="remain",)
-
     # Runtime hyper parameter
     parser.add_argument("--cuda", action="store_true", help="remain")
     parser.add_argument("--device",default=None,help="remain",)
     parser.add_argument("--reload_from_files", action="store_true", help="remain")
-    parser.add_argument("--expand_filepaths_to_save_dir", action="store_true", help="remain")
+    parser.add_argument("--expand_filepaths_to_save_dir",default=True,help="remain",)
+    parser.add_argument("--fp16", action="store_true", help="remain")
+
+    # Data parallel setting
+    parser.add_argument('--local_rank', metavar='int', type=int, default=0, help='rank')
+    parser.add_argument("--dbp_port",default=23456,type=int,help="remain",)
+    parser.add_argument("--device_ids",default=[0],type=list,help="remain",)
+
     args = parser.parse_args()
     return args
 
 
 if __name__ == '__main__':
     args = make_args()
-    os.environ['CUDA_VISIBLE_DEVICES'] = args.visible_devices
-    torch.distributed.init_process_group(backend='nccl', init_method=f'tcp://localhost:{args.dbp_port}', rank=0, world_size=1)
     main(args)
 
 """
 test
 python -m torch.distributed.launch train_QA.py --use_mini --uncased --permutations \
-    --cuda --expand_filepaths_to_save_dir \
+    --cuda \
     --model_state_file HotpotQA_QA_BiGRU_distilroberta-base-squad2.pt \
     --pretrained_model_path data/models/distilroberta-base-squad2 \
     --log_dir parallel_runs_QA_permutations/BiGRU_distilroberta-base-squad2 \

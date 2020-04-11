@@ -128,8 +128,10 @@ def main(args):
         optimizer.load_state_dict(checkpoint['optimizer'])
         if args.fp16: amp.load_state_dict(checkpoint['amp'])
 
-    scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer=optimizer,\
-                                                    mode='min', factor=0.7, patience=30)
+    scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer=optimizer,
+                            mode='min',
+                            factor=0.7,
+                            patience=dataset.get_num_batches(args.batch_size)/10)
     train_state = make_train_state(args)
 
     try:
@@ -338,8 +340,9 @@ def main(args):
                 val_bar.n = 0
                 epoch_bar.update()
 
-                # if train_state['stop_early']:
-                #     break
+                if train_state['stop_early']:
+                    print('STOP EARLY!')
+                    break
 
                 # epoch done.
             # chunk done.
@@ -405,7 +408,7 @@ def make_args():
     parser.add_argument("--cuda", action="store_true", help="remain")
     parser.add_argument("--device",default=None,help="remain",)
     parser.add_argument("--reload_from_files", action="store_true", help="remain")
-    parser.add_argument("--expand_filepaths_to_save_dir", action="store_true", help="remain")
+    parser.add_argument("--expand_filepaths_to_save_dir",default=True,help="remain",)
     parser.add_argument("--fp16", action="store_true", help="remain")
 
     # Data parallel setting
@@ -422,7 +425,7 @@ if __name__ == '__main__':
 
 """
 test
-python -m torch.distributed.launch train_GNN.py --cuda --expand_filepaths_to_save_dir \
+python -m torch.distributed.launch train_GNN.py --cuda \
     --model_state_file GNN_hidden64_heads8_pad300_chunk_first.pt \
     --save_dir save_cache_GNN \
     --hotpotQA_item_folder save_preprocess_new \

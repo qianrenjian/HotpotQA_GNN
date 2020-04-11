@@ -124,15 +124,17 @@ def process(item):
     return ques_info_dict
 
 def get_cls_feature_from_LMmodel(text,text_pair=None,
-                            tokenizer = None,
-                            model = None,
-                            add_special_tokens = True,
-                           device = 'cuda',
-                           test_mode = False):
+                                tokenizer = None,
+                                model = None,
+                                add_special_tokens = True,
+                                device = 'cuda',
+                                test_mode = False):
 
     if test_mode: return torch.randn([30, 1, 768])   
     assert model
     model_input = tokenizer.encode_plus(text,text_pair,
+                                        pad_to_max_length=True,
+                                        max_length=512,
                                         add_special_tokens=add_special_tokens,
                                         return_tensors='pt')
     
@@ -270,9 +272,10 @@ test:
 python gen_nodes_repr.py --device cuda:0 --start 0 --end 5 --model_path data/models/roberta-base --save_dir save_node_repr_roberta --spacy_model en_core_web_sm
 
 formal:
-python gen_nodes_repr.py --device cuda:0 --start 0 --end 10000 --split_num 200 --model_path data/models/xlnet-large-cased --save_dir save_node_repr_xlnet-large-cased --spacy_model en_core_web_lg
-python gen_nodes_repr.py --device cuda:1 --start 10000 --end 20000 --split_num 200 --model_path data/models/xlnet-large-cased --save_dir save_node_repr_xlnet-large-cased --spacy_model en_core_web_lg
-python gen_nodes_repr.py --device cuda:2 --start 20000 --end 30000 --split_num 200 --model_path data/models/xlnet-large-cased --save_dir save_node_repr_xlnet-large-cased --spacy_model en_core_web_lg
-python gen_nodes_repr.py --device cuda:3 --start 30000 --end 40000 --split_num 200 --model_path data/models/xlnet-large-cased --save_dir save_node_repr_xlnet-large-cased --spacy_model en_core_web_lg
+nohup python gen_nodes_repr.py 
+--device cuda:0 --start 0 --end 20000 --split_num 200 
+--model_path data/models/distilroberta-base-squad2 
+--save_dir save_node_repr_distilroberta-base-squad2 
+--spacy_model en_core_web_lg >> gen_nodes_repr_01.log &
 """
 

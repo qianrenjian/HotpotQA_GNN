@@ -423,7 +423,6 @@ if __name__ == '__main__':
 """
 test
 python -m torch.distributed.launch train_GNN.py --cuda --expand_filepaths_to_save_dir \
-    --reload_from_files \
     --model_state_file GNN_hidden64_heads8_pad300_chunk_first.pt \
     --save_dir save_cache_GNN \
     --hotpotQA_item_folder save_preprocess_new \

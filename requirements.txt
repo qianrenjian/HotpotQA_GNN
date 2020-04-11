@@ -6,4 +6,4 @@ numpy
 torch
 tensorboard
 tqdm
-data/en_core_web_sm-2.2.5.tar.gz
+data/en_core_web_lg-2.2.5.tar.gz

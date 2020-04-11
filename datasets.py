@@ -562,8 +562,3 @@ def generate_QA_batches(dataset, batch_size, shuffle=True, drop_last=True, devic
 
         yield out_data_dict
 
-
-
-
-
-

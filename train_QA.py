@@ -444,7 +444,7 @@ def make_args():
     parser.add_argument("--learning_rate",default=1e-3,type=float,help="remain",)
     parser.add_argument("--seed",default=666,type=int,help="remain",)
     parser.add_argument("--early_stopping_criteria",default=3,type=int,help="remain",)
-    parser.add_argument("--weight_decay",default=0.01,type=float,help="remain",)
+    parser.add_argument("--weight_decay",default=0.0,type=float,help="remain",)
     parser.add_argument("--adam_epsilon",default=1e-8,type=float,help="remain",)
 
     # Runtime hyper parameter

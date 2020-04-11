@@ -62,10 +62,8 @@ class GAT_HotpotQA(nn.Module):
         # hidden * nheads = 8*8, nclass= 7 
         self.out_att_sent = GraphAttentionLayer(hidden * nheads, nclass, 
                                                 dropout=dropout, alpha=alpha, concat=False, nodes_num=nodes_num)
-        
         self.out_att_para = GraphAttentionLayer(hidden * nheads, nclass, 
                                                 dropout=dropout, alpha=alpha, concat=False, nodes_num=nodes_num)
-        
         self.out_att_Qtype = GraphAttentionLayer(hidden * nheads, hidden, 
                                                  dropout=dropout, alpha=alpha, concat=False, nodes_num=nodes_num)
         

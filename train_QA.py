@@ -227,7 +227,7 @@ def main(args):
             for batch_index, batch_dict in enumerate(batch_generator):
                 optimizer.zero_grad()
                 yes_no_span = batch_dict.pop('yes_no_span')
-                print(f"input_ids: {batch_dict['input_ids'].device}")
+                print(f"\n\n\n\ninput_ids: {batch_dict['input_ids'].device}")
                 res = classifier(**batch_dict)
                 start_logits, end_logits, cls_logits = res[0], res[1], res[2]
                 

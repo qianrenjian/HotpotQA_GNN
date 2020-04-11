@@ -154,7 +154,6 @@ def main(args):
     if args.cuda:
         classifier = classifier.to(args.device)
         if args.fp16:
-            print('test')
             classifier, optimizer = amp.initialize(classifier, optimizer, opt_level=opt_level)
         classifier = nn.parallel.DistributedDataParallel(classifier,
                                                         device_ids=args.device_ids, 

@@ -560,5 +560,5 @@ def generate_QA_batches(dataset, batch_size, shuffle=True, drop_last=True, devic
 
         for k,v in out_data_dict.items():
             assert not torch.isnan(v).any()
-        yield  
+        yield out_data_dict
 

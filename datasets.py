@@ -545,11 +545,9 @@ def find_ans_spans(target, tokens, offets_type = 'position', top_num = None):
                 
     return spans[:top_num+1] if top_num else spans[:]
 
-def generate_QA_batches(dataset, batch_size, shuffle=True, drop_last=True, device="cpu"): 
-
+def generate_QA_batches(dataset, batch_size, shuffle=True, drop_last=True, device="cpu"):
     dataloader = DataLoader(dataset=dataset, batch_size=batch_size,
                             shuffle=shuffle, drop_last=drop_last)
-
     for data_dict in dataloader:
         out_data_dict = {}
         for name, tensor in data_dict.items():
@@ -560,5 +558,7 @@ def generate_QA_batches(dataset, batch_size, shuffle=True, drop_last=True, devic
                 last_size = tensor.shape[-1] # seq len.
                 out_data_dict[name] = data_dict[name].view(-1, last_size).to(device)
 
-        yield out_data_dict
+        for k,v in out_data_dict.items():
+            assert not torch.isnan(v).any()
+        yield  
 

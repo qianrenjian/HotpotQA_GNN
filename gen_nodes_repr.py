@@ -225,13 +225,13 @@ def make_args():
     # path information
     parser.add_argument(
         "--json_train_path",
-        default='data/hotpot_train_v1.1.json',
+        default='data/HotpotQA/hotpot_train_v1.1.json',
         type=str,
         help="remain",
             )
     parser.add_argument(
         "--model_path",
-        default='data/models/xlnet-large-cased',
+        default='data/HotpotQA/models/xlnet-large-cased',
         type=str,
         help="remain",
             )

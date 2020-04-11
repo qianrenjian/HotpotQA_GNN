@@ -554,11 +554,11 @@ def generate_QA_batches(dataset, batch_size, shuffle=True, drop_last=True, devic
         out_data_dict = {}
         for name, tensor in data_dict.items():
             if name in ['start_positions', 'end_positions', 'yes_no_span']:
-                out_data_dict[name] = data_dict[name].view(-1)
+                out_data_dict[name] = data_dict[name].view(-1).to(device)
             else:
                 # do it for permutations.
                 last_size = tensor.shape[-1] # seq len.
-                out_data_dict[name] = data_dict[name].view(-1, last_size)
+                out_data_dict[name] = data_dict[name].view(-1, last_size).to(device)
 
         yield out_data_dict
 

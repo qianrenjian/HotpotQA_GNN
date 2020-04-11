@@ -1,4 +1,5 @@
 import os
+import subprocess
 import numpy as np
 import torch
 from apex import amp
@@ -89,3 +90,12 @@ def get_linear_schedule_with_warmup(optimizer, num_warmup_steps, num_training_st
             )
 
     return LambdaLR(optimizer, lr_lambda, last_epoch)
+
+def rm_rf(obj_dir):
+    if not os.path.exists(obj_dir): return False
+    for root, dirs, files in os.walk(obj_dir, topdown=False):
+        for name in files:
+            os.remove(os.path.join(root, name))
+        for name in dirs:
+            os.rmdir(os.path.join(root, name))
+

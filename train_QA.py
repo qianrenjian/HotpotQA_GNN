@@ -20,7 +20,7 @@ from apex.parallel import DistributedDataParallel
 
 from datasets import HotpotQA_QA_Dataset, find_ans_spans, generate_QA_batches
 from QA_models import AutoQuestionAnswering
-from utils import set_seed_everywhere, handle_dirs, make_train_state, update_train_state, get_linear_schedule_with_warmup
+from utils import *
 from traceback import print_exc
 
 # args = Namespace(
@@ -138,12 +138,12 @@ def main(args):
 
     no_decay = ["bias", "LayerNorm.weight"]
     optimizer_grouped_parameters = [
-        {
-            "params": [p for n, p in classifier.named_parameters() if not any(nd in n for nd in no_decay)],
-            "weight_decay": args.weight_decay,
-        },
-        {"params": [p for n, p in classifier.named_parameters() if any(nd in n for nd in no_decay)], "weight_decay": 0.0},
-    ]
+            {
+                "params": [p for n, p in classifier.named_parameters() if not any(nd in n for nd in no_decay)],
+                "weight_decay": args.weight_decay,
+            },
+            {"params": [p for n, p in classifier.named_parameters() if any(nd in n for nd in no_decay)], "weight_decay": 0.0},
+        ]
     optimizer = AdamW(optimizer_grouped_parameters, lr=args.learning_rate, eps=args.adam_epsilon)
 
     # optimizer = optim.Adam(filter(lambda p: p.requires_grad, classifier.parameters()),
@@ -207,12 +207,12 @@ def main(args):
             cursor_val = checkpoint['cursor_val'] + 1
 
         for epoch_index in range(args.num_epochs):
-
+            train_bar.n = 0
+            val_bar.n = 0
             train_state['epoch_index'] = epoch_index
-
             dataset.set_split('train')
             dataset.random_seed = args.seed + epoch_index
-            batch_generator = generate_QA_batches(dataset,shuffle=False,
+            batch_generator = generate_QA_batches(dataset,shuffle=True,
                                             batch_size=args.batch_size, 
                                             device=args.device)
             running_loss = 0.0
@@ -357,9 +357,6 @@ def main(args):
                                                 model=classifier, 
                                                 optimizer = optimizer,
                                                 train_state=train_state)
-
-            train_bar.n = 0
-            val_bar.n = 0
             epoch_bar.update()
 
             if train_state['stop_early']:
@@ -368,7 +365,7 @@ def main(args):
 
     except KeyboardInterrupt:
         print("Exiting loop")
-        os.remove(args.log_dir)
+        if args.use_mini: rm_rf(args.log_dir)
     except :
         print_exc()
         print(f"err in epoch_index {epoch_index}, batch_index {batch_index}.")

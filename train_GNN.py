@@ -138,6 +138,9 @@ def main(args):
         writer = SummaryWriter(log_dir=args.log_dir, flush_secs=args.flush_secs)
         cursor_train = 0
         cursor_val = 0
+        if args.reload_from_files and 'cursor_train' in checkpoint.keys():
+            cursor_train = checkpoint['cursor_train'] + 1
+            cursor_val = checkpoint['cursor_val'] + 1
         # for epoch_index in range(args.num_epochs):
         if args.chunk_size < 0:
             args.chunk_size = total_items
@@ -162,6 +165,8 @@ def main(args):
                             position=1)
 
             for epoch_index in range(args.num_epochs):
+                train_bar.n = 0
+                val_bar.n = 0
                 train_state['epoch_index'] = epoch_index
                 dataset.set_split('train')
                 batch_generator = gen_GNN_batches(dataset,
@@ -335,9 +340,6 @@ def main(args):
                 train_state = update_train_state(args=args, model=classifier, 
                                                 optimizer = optimizer,
                                                 train_state=train_state)
-
-                train_bar.n = 0
-                val_bar.n = 0
                 epoch_bar.update()
 
                 if train_state['stop_early']:

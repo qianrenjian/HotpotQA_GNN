@@ -94,7 +94,6 @@ def set_envs(args):
         # args.model_state_file = os.path.join(args.colab_project_path, args.model_state_file)
         args.pretrained_model_path = os.path.join(args.colab_data_path, args.pretrained_model_path)
         # args.log_dir = os.path.join(args.colab_project_path, args.log_dir)
-        from tqdm.notebook import tqdm
 
 def compute_span_accuracy(start_logits, start_positions, end_logits, end_positions):
 
@@ -228,6 +227,8 @@ def main(args):
             for batch_index, batch_dict in enumerate(batch_generator):
                 optimizer.zero_grad()
                 yes_no_span = batch_dict.pop('yes_no_span')
+                print(f"classifier: {classifier.device}")
+                print(f"input_ids: {batch_dict['input_ids'].device}")
                 res = classifier(**batch_dict)
                 start_logits, end_logits, cls_logits = res[0], res[1], res[2]
                 

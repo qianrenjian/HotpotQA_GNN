@@ -472,7 +472,6 @@ class HotpotQA_QA_Dataset(Dataset):
             for index in range(self._target_size):
                 if self._target_pair[index]['_id'] == _id:
                     self.__getitem__(index=index, detail_mod = True)
-                    return 
             
     def check_all(self):
         '''check index error and no-answer error.'''

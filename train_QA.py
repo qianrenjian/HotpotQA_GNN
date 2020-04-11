@@ -376,14 +376,14 @@ def make_args():
     # Data and path information
     parser.add_argument(
         "--json_train_path",
-        default='data/hotpot_train_v1.1.json',
+        default='data/HotpotQA/hotpot_train_v1.1.json',
         type=str,
         help="remain",
             )
     parser.add_argument("--use_mini", action="store_true", help="remain")
     parser.add_argument(
         "--json_train_mini_path",
-        default='data/hotpot_train_mini.json',
+        default='data/HotpotQA/hotpot_train_mini.json',
         type=str,
         help="remain",
             )

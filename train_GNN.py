@@ -235,7 +235,6 @@ def main(args):
                                                 labels=topN_sent_label.view(-1))
                     running_acc_topN += (acc_t_topN - running_acc_topN) / (batch_index + 1)
 
-
                     # update bar
                     train_bar.set_postfix(loss=running_loss,epoch=epoch_index)
                     train_bar.update()

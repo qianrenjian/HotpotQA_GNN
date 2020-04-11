@@ -284,7 +284,7 @@ class AutoQuestionAnswering(PreTrainedModel):
 
         if index_start < 0:
             print(f"Don't find layer name: {layer_name}")
-            print(f"mast in : \n{self.transformer.state_dict().keys()}")
+            print(f"must in : \n{self.transformer.state_dict().keys()}")
             return
         
         no_grad_nums = index_start + 1

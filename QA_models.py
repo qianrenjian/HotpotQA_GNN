@@ -330,7 +330,6 @@ class AutoQuestionAnswering(PreTrainedModel):
             inputs_embeds=inputs_embeds,
             )
         hidden_states = transformer_outputs[0]
-        print(f"self.start_logits: {self.start_logits.device}")
         print(f"hidden_states: {hidden_states.device}")
         start_logits = self.start_logits(hidden_states, p_mask=special_tokens_mask)
 

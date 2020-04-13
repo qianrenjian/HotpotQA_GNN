@@ -129,6 +129,7 @@ def main(args):
 
     tokenizer = AutoTokenizer.from_pretrained(args.pretrained_model_path, local_files_only=True)
     classifier = AutoQuestionAnswering.from_pretrained(model_path=args.pretrained_model_path,
+                                                        header_mode=args.header_mode,
                                                         cls_index=tokenizer.cls_token_id)
     classifier.freeze_to_layer_by_name(args.freeze_layer_name)
     classifier.train()
@@ -176,7 +177,7 @@ def main(args):
     scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer=optimizer,
                             mode='min',
                             factor=0.7,
-                            patience=dataset.get_num_batches(args.batch_size)/10)
+                            patience=dataset.get_num_batches(args.batch_size)/50)
     # scheduler = get_linear_schedule_with_warmup(
     #     optimizer,
     #     num_warmup_steps=args.warmup_steps,
@@ -372,7 +373,7 @@ def main(args):
 def make_args():
     parser = argparse.ArgumentParser()
 
-    # Data and path information
+    # Path information
     parser.add_argument(
         "--json_train_path",
         default='data/HotpotQA/hotpot_train_v1.1.json',
@@ -404,7 +405,6 @@ def make_args():
         type=str,
         help="remain",
             )
-    parser.add_argument("--freeze_layer_name",default='all',type=str,help="remain")
 
     # SummaryWriter
     parser.add_argument(
@@ -436,6 +436,10 @@ def make_args():
     parser.add_argument("--topN_sents",default=3,type=int,help="remain",)
     parser.add_argument("--max_length",default=512,type=int,help="remain",)
     parser.add_argument("--permutations", action="store_true", help="remain")
+
+    # model parameters
+    parser.add_argument("--freeze_layer_name",default='all',type=str,help="remain")
+    parser.add_argument("--header_mode",default='BiGRU',type=str,help="remain",)
 
     # Training hyper parameter
     parser.add_argument("--num_epochs",default=1,type=int,help="remain",)

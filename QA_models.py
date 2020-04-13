@@ -247,13 +247,16 @@ class AutoQuestionAnswering(PreTrainedModel):
         self.start_n_top = config.start_n_top
         self.end_n_top = config.end_n_top
 
-        self.transformer = LM_Model
-        self.start_logits = PoolerStartLogits_GRU(config)
-        self.end_logits = PoolerEndLogits_GRU(config)
+        self.transformer = LM_Model        
+        if config.header_mode == 'BiGRU':
+            self.start_logits = PoolerStartLogits_GRU(config)
+            self.end_logits = PoolerEndLogits_GRU(config)
+        elif config.header_mode == 'MLP':
+            self.start_logits = PoolerStartLogits(config)
+            self.end_logits = PoolerEndLogits(config)
+
         self.answer_class = PoolerAnswerClass(config)
-
         self.cls_index=config.cls_index
-
         self.init_weights()
 
     def init_weights(self):
@@ -301,13 +304,15 @@ class AutoQuestionAnswering(PreTrainedModel):
         # no need to return.
     
     @classmethod
-    def from_pretrained(cls, model_path, cls_index=0):
+    def from_pretrained(cls, model_path, header_mode='BiGRU', cls_index=0):
+        assert header_mode in ['BiGRU', 'MLP']
         model = AutoModel.from_pretrained(model_path, local_files_only=True)
         config = model.config
         config_dict = config.to_dict()
         config_dict['start_n_top'] = 5
         config_dict['end_n_top'] = 5
         config_dict['cls_index'] = cls_index
+        config_dict['header_mode'] = header_mode
         config = config.from_dict(config_dict)
         return cls(config, model)
     

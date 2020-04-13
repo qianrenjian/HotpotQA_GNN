@@ -425,7 +425,7 @@ if __name__ == '__main__':
     main(args)
 
 """
-test
+test:
 python -m torch.distributed.launch train_GNN.py --cuda \
     --model_state_file GNN_hidden64_heads8_pad300_chunk_first.pt \
     --save_dir save_cache_GNN \

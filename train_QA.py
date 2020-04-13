@@ -467,7 +467,7 @@ if __name__ == '__main__':
     main(args)
 
 """
-test
+test:
 python -m torch.distributed.launch train_QA.py --use_mini --uncased --permutations \
     --cuda \
     --model_state_file HotpotQA_QA_BiGRU_distilroberta-base-squad2.pt \

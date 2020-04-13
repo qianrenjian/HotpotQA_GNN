@@ -75,6 +75,15 @@ nohup python -m torch.distributed.launch train_QA.py --permutations \
     --cuda --fp16 >> train_QA.log &
 ```
 
+## visualize comparation
+
+use tensorboard:
+
+```bash
+tensorboard --logdir=parallel_runs_GNN/ --port 12345 --bind_all
+tensorboard --logdir=parallel_runs_QA_permutations/ --port 12346 --bind_all
+```
+
 ## visualize evaluation
 
 

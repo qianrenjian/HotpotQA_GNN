@@ -277,9 +277,9 @@ python gen_nodes_repr.py --device cuda:0 --start 0 --end 5 --model_path data/mod
 
 formal:
 nohup python gen_nodes_repr.py 
---device cuda:0 --start 0 --end 20000 --split_num 200 
---model_path data/models/distilroberta-base-squad2 
---save_dir save_node_repr_distilroberta-base-squad2 
---spacy_model en_core_web_lg >> gen_nodes_repr_01.log &
+    --device cuda:0 --start 0 --end 20000 --split_num 200 
+    --model_path data/models/distilroberta-base-squad2 
+    --save_dir save_node_repr_distilroberta-base-squad2 
+    --spacy_model en_core_web_lg >> gen_nodes_repr_01.log &
 """
 

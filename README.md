@@ -75,7 +75,7 @@ nohup python -m torch.distributed.launch train_QA.py --permutations \
     --cuda --fp16 >> train_QA.log &
 ```
 
-## evaluate in visualization
+## visualize evaluation
 
 
 

@@ -22,7 +22,7 @@ def create_ques_info_dict():
     ques_info_dict['sp_adj'] = None
     return ques_info_dict
 
-def process(item):
+def construct_graph(item):
     '''sub-function for multi-processes function.'''
     global tokenizer
     ques_info_dict = create_ques_info_dict()
@@ -147,7 +147,7 @@ def get_cls_feature_from_LMmodel(text,text_pair=None,
     
     return last_hidden_state
 
-def build_save_nodes_feat(index_item, model, test_mode = False):
+def gen_nodes_feat(index_item, model, test_mode = False):
     """train on multi-gpu in multi-threadings."""
     index, ques_item = index_item[0], index_item[1]
         
@@ -205,8 +205,8 @@ def save_in_steps(json_train, model, split_num = 200, start = 0, end = 1000):
     hotpotQA_preprocess_cls = []
     for index,item in enumerate(tqdm(json_train[start:end])):
         if os.path.exists(f"{args.save_dir}/{item['_id']}.json"): continue
-        i = build_save_nodes_feat(index_item = (index + start + 1, process(item)), model=model)
-        if not i: 
+        i = gen_nodes_feat(index_item = (index + start + 1, construct_graph(item)), model=model)
+        if not i:
             print(f"err id: {item['_id']}")
             continue
         hotpotQA_preprocess_cls.append(i[1])

@@ -88,7 +88,7 @@ tensorboard --logdir=parallel_runs_QA_permutations/ --port 12346 --bind_all
 
 use the official evaluation script.
 
-firstly, generate prediction file, output file is something likes `dev_distractor_pred_2020-1-1_11:11:11.json`.
+firstly, generate prediction file. the output file is something likes `dev_distractor_pred_2020-1-1_11:11:11.json`.
 
 ```bash
 python evaluate.py \

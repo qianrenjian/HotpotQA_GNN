@@ -155,6 +155,7 @@ def main(args):
         classifier = classifier.to(args.device)
         if args.fp16:
             classifier, optimizer = amp.initialize(classifier, optimizer, opt_level=opt_level)
+            amp.register_half_function(torch, "einsum")
         # classifier = nn.parallel.DistributedDataParallel(classifier,
         #                                                 device_ids=args.device_ids, 
         #                                                 output_device=0, 
@@ -377,42 +378,30 @@ def make_args():
     parser.add_argument(
         "--json_train_path",
         default='data/HotpotQA/hotpot_train_v1.1.json',
-        type=str,
-        help="remain",
-            )
+        type=str,help="remain",)
     parser.add_argument("--use_mini", action="store_true", help="remain")
     parser.add_argument(
         "--json_train_mini_path",
         default='data/HotpotQA/hotpot_train_mini.json',
-        type=str,
-        help="remain",
-            )
+        type=str,help="remain",)
     parser.add_argument(
         "--model_state_file",
         default="HotpotQA_QA_BiGRU_distilroberta-base-squad2.pt",
-        type=str,
-        help="remain",
-            )
+        type=str,help="remain",)
     parser.add_argument(
         "--save_dir",
         default='save_cache_permutations',
-        type=str,
-        help="remain",
-            )
+        type=str,help="remain",)
     parser.add_argument(
         "--pretrained_model_path",
         default='data/models/distilroberta-base-squad2',
-        type=str,
-        help="remain",
-            )
+        type=str,help="remain",)
 
     # SummaryWriter
     parser.add_argument(
         "--log_dir",
         default='runs_QA_permutations/BiGRU_distilroberta-base-squad2',
-        type=str,
-        help="remain",
-            )
+        type=str,help="remain",)
     parser.add_argument("--flush_secs",default=120,type=int,help="remain",)
 
     # colab
@@ -421,15 +410,11 @@ def make_args():
     parser.add_argument(
         "--colab_data_path",
         default='/content/drive/My Drive/DOWNLOAD/',
-        type=str,
-        help="remain",
-            )
+        type=str,help="remain",)
     parser.add_argument(
         "--colab_project_path",
         default='/content/drive/My\ Drive/HotpotQA_XGM/',
-        type=str,
-        help="remain",
-            )
+        type=str,help="remain",)
 
     # Dataset parameters
     parser.add_argument("--uncased", action="store_true", help="remain")

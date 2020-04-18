@@ -72,11 +72,9 @@ def construct_graph(item):
         sp_adj.append(edge_type_map['Q_P'], Q_node_cursor, P_node_cursor)
 
         for s_index, sentence in enumerate(paragraph[1]):
-            S_id = f'{Q_id}_{p_index}_{s_index}'
-
             index_cursor += 1
             S_node_cursor = index_cursor
-            S_node = SentenceNode.build(S_node_cursor, P_node_cursor, sentence)
+            S_node = SentenceNode.build(S_node_cursor, P_node_cursor, sentence, s_index)
             
             # 判断support fact
             if (paragraph_label == 1) and (s_index in supporting_facts[title]):
@@ -147,10 +145,8 @@ def get_cls_feature_from_LMmodel(text,text_pair=None,
     
     return last_hidden_state
 
-def gen_nodes_feat(index_item, model, test_mode = False):
-    """train on multi-gpu in multi-threadings."""
-    index, ques_item = index_item[0], index_item[1]
-        
+def gen_nodes_feat(ques_item, model, test_mode = False):
+    """train on multi-gpu in multi-threadings."""        
     try:
         node_list = ques_item['node_list']
         # Q node
@@ -195,9 +191,8 @@ def gen_nodes_feat(index_item, model, test_mode = False):
                                                             device = args.device,
                                                             test_mode=test_mode)
 
-        return (index,ques_item)
+        return ques_item
     except:
-        print(index_item)
         print_exc()
         return None
 
@@ -205,7 +200,7 @@ def save_in_steps(json_train, model, split_num = 200, start = 0, end = 1000):
     hotpotQA_preprocess_cls = []
     for index,item in enumerate(tqdm(json_train[start:end])):
         if os.path.exists(f"{args.save_dir}/{item['_id']}.json"): continue
-        i = gen_nodes_feat(index_item = (index + start + 1, construct_graph(item)), model=model)
+        i = (index + start + 1, gen_nodes_feat(ques_item = construct_graph(item), model=model))
         if not i:
             print(f"err id: {item['_id']}")
             continue
@@ -222,6 +217,22 @@ def save_in_steps(json_train, model, split_num = 200, start = 0, end = 1000):
                 
             hotpotQA_preprocess_cls = []
             torch.cuda.empty_cache()
+
+def build_for_one_item(item_list, args_):
+    """for eval. 
+    """
+    global args, tokenizer
+    args = args_
+    try:
+        nlp
+    except:
+        print('init...')
+        tokenizer = AutoTokenizer.from_pretrained(args.model_path, local_files_only=True)
+        set_tokenizer(tokenizer)
+        model = AutoModel.from_pretrained(args.model_path, local_files_only=True)
+        model = model.to(args.device)
+        set_spacy()
+    return [gen_nodes_feat(ques_item=construct_graph(item), model=model) for item in tqdm(item_list)]
 
 def make_args():
     parser = argparse.ArgumentParser()

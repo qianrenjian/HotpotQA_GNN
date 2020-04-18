@@ -168,16 +168,16 @@ class ParagraphTitleNode(BaseNode):
 
 class SentenceNode(BaseNode):
     def __init__(self,node_id, node_type, parent_id, content_raw, content_tokens,\
-                    content_NER_list = None, cls_feature=None, is_support = False):
+                    content_NER_list = None, cls_feature=None, is_support = False, order_in_para=None):
         super(SentenceNode, self).__init__(node_id, node_type, parent_id, 
-                                           content_raw,content_tokens,cls_feature)
+                                           content_raw, content_tokens, cls_feature)
 
         self.content_NER_list = content_NER_list
-
+        self.order_in_para = order_in_para
         self.is_support = is_support # 段落 句子 
 
     @classmethod
-    def build(cls, node_id, parent_id, content_raw):
+    def build(cls, node_id, parent_id, content_raw, order_in_para):
 
         _, content_NER_list = find_NER_in_spacy(content_raw, ner=True)
         content_tokens = tokenizer.tokenize(content_raw)
@@ -186,7 +186,7 @@ class SentenceNode(BaseNode):
 
         node_type = 'Sentence'
         return cls(node_id, node_type, parent_id, content_raw, content_tokens,\
-                    content_NER_list)
+                    content_NER_list, order_in_para=order_in_para)
 
     def set_support(self):
         self.is_support = True
@@ -205,6 +205,7 @@ class SentenceNode(BaseNode):
             'content_NER_list': self.content_NER_list,
             'cls_feature': self.cls_feature.tolist(),
             'is_support': self.is_support,
+            'order_in_para': self.order_in_para,
                }
 
     @classmethod

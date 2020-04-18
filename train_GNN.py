@@ -4,7 +4,6 @@ from argparse import Namespace
 import argparse
 import time
 from traceback import print_exc
-from collections import defaultdict
 
 import torch
 import torch.nn as nn
@@ -361,27 +360,19 @@ def make_args():
     parser.add_argument(
         "--model_state_file",
         default="GNN_hidden64_heads8_pad300_chunk_first.pt",
-        type=str,
-        help="remain",
-            )
+        type=str,help="remain",)
     parser.add_argument(
         "--save_dir",
         default='save_cache_GNN',
-        type=str,
-        help="remain",
-            )
+        type=str,help="remain",)
     parser.add_argument(
         "--hotpotQA_item_folder",
         default='save_preprocess_new',
-        type=str,
-        help="remain",
-            )
+        type=str,help="remain",)
     parser.add_argument(
         "--log_dir",
         default='runs_GNN/hidden64_heads8_pad300_chunk_first',
-        type=str,
-        help="remain",
-            )
+        type=str,help="remain",)
 
     # Dataset parameter
     parser.add_argument("--pad_max_num",default=300,type=int,help="remain")

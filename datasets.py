@@ -14,8 +14,7 @@ from tqdm import tqdm
 from Nodes import Adjacency_sp, auto_reload_Node
 
 class HotpotQA_GNN_Dataset(Dataset):
-    def __init__(self, train_list, val_list):
-        
+    def __init__(self, train_list, val_list):     
         # elements
         self.train_list = train_list # json files path list.
         self.train_size = len(self.train_list)
@@ -91,7 +90,6 @@ class HotpotQA_GNN_Dataset(Dataset):
         return class_weights_sent, class_weights_para, class_weights_Qtype
     
     def set_parameters(self, pad_max_num=-1, pad_value=0, pad_to_max_length=True):
-        
         self.pad_max_num = pad_max_num if pad_max_num != -1 else \
             max([len(ques['node_list']) for ques in self.train_list] \
                 + [len(ques['node_list']) for ques in self.val_list])
@@ -99,7 +97,7 @@ class HotpotQA_GNN_Dataset(Dataset):
         self.pad_to_max_length = pad_to_max_length
 
     def set_split(self, split="train"):
-        assert split in ['train', 'val', 'test']
+        assert split in ['train', 'val']
         self._target_split = split
         self._target_pair, self._target_size = self._lookup_dict[split]
 
@@ -120,15 +118,7 @@ class HotpotQA_GNN_Dataset(Dataset):
                                and n.is_support else 0 for n in node_list]).unsqueeze(-1)
 
         answer_type = 1 if node_list[0].answer in ['yes', 'no'] else 0
-        ans_yes_no = 1 if node_list[0].answer == 'yes' else 0
-
         answer_type = torch.tensor([answer_type])
-        ans_yes_no = torch.tensor([ans_yes_no])
-
-        # find ans span in top 4 sentences.
-        answer_tokens = node_list[0].answer_tokens
-        ques_tokens = node_list[0].content_tokens
-        sent_tokens = [n.content_tokens for n in node_list if n.node_type == 'Sentence']
 
         if self.pad_to_max_length:
             node_len = feature_matrix.shape[-2]
@@ -164,14 +154,18 @@ class HotpotQA_GNN_Dataset(Dataset):
             'sent_mask': sent_mask,
             'para_mask': para_mask,
             'labels': labels,
-            'answer_type': answer_type,
-            'ans_yes_no': ans_yes_no,
-            'ques_tokens': ques_tokens,
-            'answer_tokens': answer_tokens,
-            'sent_tokens': sent_tokens,
-        }
+            'answer_type': answer_type
+            }
 
         return item_info_dict
+
+    @classmethod
+    def load_for_eval(cls, ques_list):
+        """for eval
+        """
+        d = cls([], ques_list)
+        d.set_split('val') # the same as val
+        return d
 
     def __len__(self):
         return self._target_size
@@ -186,7 +180,7 @@ class HotpotQA_GNN_Dataset(Dataset):
     def get_num_batches(self, batch_size):
         return len(self) // batch_size
 
-def gen_GNN_batches(dataset, batch_size, shuffle=True, drop_last=True, device='cpu', seed = 123):
+def old_gen_GNN_batches(dataset, batch_size, shuffle=True, drop_last=True, device='cpu', seed = 123):
 
     if seed: np.random.seed(seed)
     dataset_len = dataset.__len__()
@@ -212,12 +206,7 @@ def gen_GNN_batches(dataset, batch_size, shuffle=True, drop_last=True, device='c
                 labels = res_dict['labels'].unsqueeze(0)
 
                 answer_type = res_dict['answer_type']
-                ans_yes_no = res_dict['ans_yes_no']
-                
-                ques_tokens = res_dict['ques_tokens']
-                answer_tokens = res_dict['answer_tokens']
-                sent_tokens = []
-                
+                                
                 FLAG_FIRST = False
             else:
                 feature_matrix = torch.cat([feature_matrix, res_dict['feature_matrix'].unsqueeze(0)], dim=0)
@@ -228,9 +217,6 @@ def gen_GNN_batches(dataset, batch_size, shuffle=True, drop_last=True, device='c
                 labels = torch.cat([labels, res_dict['labels'].unsqueeze(0)], dim=0)
                 
                 answer_type = torch.cat([answer_type, res_dict['answer_type']], dim=-1)
-                ans_yes_no = torch.cat([ans_yes_no, res_dict['ans_yes_no']], dim=-1)
-
-            sent_tokens.append(res_dict['sent_tokens'])
 
         cursor += batch_size
         
@@ -240,7 +226,6 @@ def gen_GNN_batches(dataset, batch_size, shuffle=True, drop_last=True, device='c
         para_mask = para_mask.long().to(device)
         labels = labels.long().to(device)
         answer_type = answer_type.long().to(device)
-        ans_yes_no = ans_yes_no.long().to(device)
         
         batch_item_info_dict = {
             'feature_matrix': feature_matrix,
@@ -249,20 +234,23 @@ def gen_GNN_batches(dataset, batch_size, shuffle=True, drop_last=True, device='c
             'para_mask': para_mask,
             'labels': labels,
             'answer_type': answer_type,
-            
-            # model2 
-            'ans_yes_no': ans_yes_no,
-            'ques_tokens':ques_tokens,
-            'answer_tokens': answer_tokens,
-            'sent_tokens': sent_tokens,
         }
         for k,v in batch_item_info_dict.items():
             assert type(v)==list or not torch.isnan(v).any()
 
         yield batch_item_info_dict
 
+def gen_GNN_batches(dataset, batch_size, shuffle=True, drop_last=True, device="cpu"):
+    dataloader = DataLoader(dataset=dataset, batch_size=batch_size,
+                            shuffle=shuffle, drop_last=drop_last)
+    for data_dict in dataloader:
+        for k,v in data_dict.items():
+            assert not torch.isnan(v).any()
+            data_dict[k] = data_dict[k].to(device)
+        yield data_dict
+
 class HotpotQA_QA_Dataset(Dataset):
-    def __init__(self, train_list, val_list):
+    def __init__(self, train_list, val_list, eval_list=None):
   
         # elements
         self.train_list = train_list # json files path list.
@@ -271,9 +259,14 @@ class HotpotQA_QA_Dataset(Dataset):
         self.val_list = val_list
         self.val_size = len(self.val_list)
 
+        self.eval_list = eval_list
+        self.eval_size = len(self.eval_list)
+
         # func
         self._lookup_dict = {'train': (self.train_list, self.train_size),
-                            'val': (self.val_list, self.val_size)}
+                            'val': (self.val_list, self.val_size),
+                            'eval': (self.eval_list, self.eval_size),
+                            }
         self.set_split('train')
         
         # parameters
@@ -305,7 +298,7 @@ class HotpotQA_QA_Dataset(Dataset):
         self.uncased = uncased
         
     def set_split(self, split="train"):
-        assert split in ['train', 'val', 'test']
+        assert split in ['train', 'val', 'eval']
         self._target_split = split
         self._target_pair, self._target_size = self._lookup_dict[split]
     
@@ -347,7 +340,7 @@ class HotpotQA_QA_Dataset(Dataset):
                 break
             return inputs_id
 
-    def __getitem__(self, index, check_err_mod=False, detail_mod=False):
+    def get_item_for_train(self, index, check_err_mod=False, detail_mod=False):
         item = self._target_pair[index]
         support_sents = []
         
@@ -465,6 +458,52 @@ class HotpotQA_QA_Dataset(Dataset):
             }
 
         return item_info_dict
+
+    @classmethod
+    def load_for_eval(cls, eval_list):
+        d = cls([], [], eval_list)
+        d.set_split('eval') # different from val.
+        return d
+
+    def get_item_for_eval(self, index):
+        question, predice_topN_sents = self.eval_list[index]
+        question = self.clean_text(question)
+        predice_topN_sents = [self.clean_text(i) for i in predice_topN_sents]
+        predice_topN_sents = [' '.join(predice_topN_sents)]
+        ques_sents = [[(question, sent)] for sent in predice_topN_sents][0]
+
+        input_ids_list = []
+        token_type_ids_list = []
+        attention_mask_list = []
+        special_tokens_mask_list = []
+
+        res = self.tokenizer.batch_encode_plus(ques_sents, 
+                                                max_length=512,
+                                                pad_to_max_length=True, 
+                                                return_tensors='pt',
+                                                return_special_tokens_masks=True)
+        # RoBERTa does not make use of token type ids
+        if 'token_type_ids' not in res:
+            res['token_type_ids'] = torch.zeros_like(res['input_ids'])
+        token_type_ids_list.append(res['token_type_ids'])
+        attention_mask_list.append(res['attention_mask'])
+        special_tokens_mask_list.append(res['special_tokens_mask'])
+        input_ids_list.append(res['input_ids'][0])
+
+        item_info_dict = {
+            'input_ids': torch.stack(input_ids_list).long(),
+            'token_type_ids': torch.stack(token_type_ids_list).long(),
+            'attention_mask': torch.stack(attention_mask_list).long(),
+            'special_tokens_mask': torch.stack(special_tokens_mask_list).long()
+            }
+
+        return item_info_dict
+
+    def __getitem__(self, index, check_err_mod=False, detail_mod=False):
+        if self._target_split in ['train', 'val']:
+            return self.get_item_for_train(index, check_err_mod, detail_mod)
+        elif self._target_split == 'eval':
+            return self.get_item_for_eval(index)
 
     def get_item_err_detail_by_id(self, _id):
         for mode in ['train', 'val']:

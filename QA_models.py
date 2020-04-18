@@ -86,6 +86,8 @@ class PoolerEndLogits_GRU(nn.Module):
         return x
 
 class PoolerStartLogits_Transformer(nn.Module):
+    """unused
+    """
     def __init__(self, config):
         super().__init__()
         self.transformer_encoder = nn.TransformerEncoder(
@@ -107,6 +109,8 @@ class PoolerStartLogits_Transformer(nn.Module):
         return x
 
 class PoolerEndLogits_Transformer(nn.Module):
+    """unused
+    """
     def __init__(self, config):
         super().__init__()
         self.dense_0 = nn.Linear(config.hidden_size * 2, config.hidden_size)
@@ -173,7 +177,6 @@ class PoolerStartLogits(nn.Module):
 class PoolerEndLogits(nn.Module):
     """ Compute SQuAD end_logits from sequence hidden states and start token hidden state.
     """
-
     def __init__(self, config):
         super().__init__()
         self.dense_0 = nn.Linear(config.hidden_size * 2, config.hidden_size)
@@ -209,6 +212,7 @@ class PoolerEndLogits(nn.Module):
             start_states = hidden_states.gather(-2, start_positions)  # shape (bsz, 1, hsz)
             start_states = start_states.expand(-1, slen, -1)  # shape (bsz, slen, hsz)
 
+        # eval: hidden_states shape (bsz, slen, start_n_top, hsz)
         x = self.dense_0(torch.cat([hidden_states, start_states], dim=-1))
         x = self.activation(x)
         x = self.LayerNorm(x)
@@ -223,13 +227,24 @@ class PoolerEndLogits(nn.Module):
         return x
 
 class PoolerAnswerClass(nn.Module):
+    """ Compute SQuAD 2.0 answer class from classification and start tokens hidden states. """
+
     def __init__(self, config):
         super().__init__()
-        self.activation = F.leaky_relu
-        self.dense = nn.Linear(config.hidden_size, 2)
+        self.dense_0 = nn.Linear(config.hidden_size * 2, config.hidden_size)
+        self.activation = nn.Tanh()
+        self.dense_1 = nn.Linear(config.hidden_size, 1, bias=False)
 
-    def forward(self, hidden_states, cls_index=None):
+    def forward(self, hidden_states, start_states=None, start_positions=None, cls_index=None,ignore_index=-100):
         hsz = hidden_states.shape[-1]
+        assert (
+            start_states is not None or start_positions is not None
+        ), "One of start_states, start_positions should be not None"
+        if start_positions is not None:
+            start_positions = deepcopy(start_positions)
+            start_positions -= start_positions.eq(ignore_index)*ignore_index
+            start_positions = start_positions[:, None, None].expand(-1, -1, hsz)  # shape (bsz, 1, hsz)
+            start_states = hidden_states.gather(-2, start_positions).squeeze(-2)  # shape (bsz, hsz)
 
         if cls_index is not None:
             cls_index = cls_index[:, None, None].expand(-1, -1, hsz)  # shape (bsz, 1, hsz)
@@ -237,7 +252,9 @@ class PoolerAnswerClass(nn.Module):
         else:
             cls_token_state = hidden_states[:, -1, :]  # shape (bsz, hsz)
 
-        x = self.dense(cls_token_state)
+        x = self.dense_0(torch.cat([start_states, cls_token_state], dim=-1))
+        x = self.activation(x)
+        x = self.dense_1(x).squeeze(-1)
 
         return x
 
@@ -310,7 +327,7 @@ class AutoQuestionAnswering(PreTrainedModel):
         config = model.config
         config_dict = config.to_dict()
         config_dict['start_n_top'] = 5
-        config_dict['end_n_top'] = 5
+        config_dict['end_n_top'] = 1
         config_dict['cls_index'] = cls_index
         config_dict['header_mode'] = header_mode
         config = config.from_dict(config_dict)
@@ -326,7 +343,7 @@ class AutoQuestionAnswering(PreTrainedModel):
             start_positions=None,
             end_positions=None,
             special_tokens_mask=None,
-        ):
+            ):
 
         transformer_outputs = self.transformer(
             input_ids,
@@ -339,7 +356,7 @@ class AutoQuestionAnswering(PreTrainedModel):
         start_logits = self.start_logits(hidden_states, p_mask=special_tokens_mask)
 
         outputs = transformer_outputs[1:]  # Keep mems, hidden states, attentions if there are in it
-        bsz = start_positions.shape[0]
+        bsz = input_ids.shape[0]
         cls_index = torch.zeros([bsz], device = input_ids.device).fill_(self.cls_index).long()
         if (start_positions is not None and end_positions is not None):
             # If we are on multi-GPU, let's remove the dimension added by batch splitting
@@ -377,7 +394,7 @@ class AutoQuestionAnswering(PreTrainedModel):
                 end_log_probs, self.end_n_top, dim=1
             )  # shape (bsz, end_n_top, start_n_top)
             end_top_log_probs = end_top_log_probs.view(-1, self.start_n_top * self.end_n_top)
-            end_top_index = end_top_index.view(-1, self.start_n_top * self.end_n_top)
+            # end_top_index = end_top_index.view(-1, self.start_n_top * self.end_n_top)
 
             start_states = torch.einsum(
                 "blh,bl->bh", hidden_states, start_log_probs

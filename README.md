@@ -84,7 +84,22 @@ tensorboard --logdir=parallel_runs_GNN/ --port 12345 --bind_all
 tensorboard --logdir=parallel_runs_QA_permutations/ --port 12346 --bind_all
 ```
 
-## visualize evaluation
+## evaluation
 
+use the official evaluation script.
 
+firstly, generate prediction file, output file is something likes `dev_distractor_pred_2020-1-1_11:11:11.json`.
 
+```bash
+python evaluate.py \
+    --dev_json_path data/HotpotQA/hotpot_dev_distractor_v1.json \
+    --GNN_model_path save_model_GNN/GNN_HotpotQA_hidden64_heads8_pad300_chunk_first.pt \
+    --QA_model_path save_model_QA_permutations/HotpotQA_QA_BiGRU_roberta-base-squad2.pt \
+    --LMmodel_path data/models/roberta-base-squad2 
+```
+
+then run
+
+```bash
+python hotpot_evaluate_v1.py dev_distractor_pred_2020-1-1_11:11:11.json data/HotpotQA/hotpot_dev_distractor_v1.json
+```

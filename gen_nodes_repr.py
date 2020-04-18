@@ -201,7 +201,7 @@ def save_in_steps(json_train, model, split_num = 200, start = 0, end = 1000):
     for index,item in enumerate(tqdm(json_train[start:end])):
         if os.path.exists(f"{args.save_dir}/{item['_id']}.json"): continue
         i = (index + start + 1, gen_nodes_feat(ques_item = construct_graph(item), model=model))
-        if not i:
+        if i == None:
             print(f"err id: {item['_id']}")
             continue
         hotpotQA_preprocess_cls.append(i[1])

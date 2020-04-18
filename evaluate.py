@@ -15,8 +15,8 @@ from QA_models import AutoQuestionAnswering
 args = Namespace(
     # Data and model path.
     dev_json_path = 'data/HotpotQA/hotpot_dev_distractor_v1.json',
-    GNN_model_path = 'save_cache_GNN/GNN_HotpotQA_hidden64_heads8_pad300_chunk_first.pt',
-    QA_model_path = 'save_cache_permutations/HotpotQA_QA_BiGRU_roberta-base-squad2.pt',
+    GNN_model_path = 'save_model_GNN/GNN_HotpotQA_hidden64_heads8_pad300_chunk_first.pt',
+    QA_model_path = 'save_model_QA_permutations/HotpotQA_QA_BiGRU_roberta-base-squad2.pt',
     LMmodel_path = 'data/models/roberta-base-squad2',
 
     # GNN parameters. MUST match saved pt file.
@@ -146,11 +146,11 @@ def make_args():
         type=str,help="remain",)
     parser.add_argument(
         "--GNN_model_path",
-        default='save_cache_GNN/GNN_HotpotQA_hidden64_heads8_pad300_chunk_first.pt',
+        default='save_model_GNN/GNN_HotpotQA_hidden64_heads8_pad300_chunk_first.pt',
         type=str,help="remain",)
     parser.add_argument(
         "--QA_model_path",
-        default='save_cache_permutations/HotpotQA_QA_BiGRU_roberta-base-squad2.pt',
+        default='save_model_QA_permutations/HotpotQA_QA_BiGRU_roberta-base-squad2.pt',
         type=str,help="remain",)
     parser.add_argument(
         "--LMmodel_path",
@@ -187,4 +187,10 @@ if __name__ == "__main__":
     with open(f"dev_distractor_pred_{time_now}.json", 'w', encoding='utf-8') as f1:
         json.dump(res, f1)
 
-
+"""
+python evaluate.py \
+    --dev_json_path data/HotpotQA/hotpot_dev_distractor_v1.json \
+    --GNN_model_path save_model_GNN/GNN_HotpotQA_hidden64_heads8_pad300_chunk_first.pt \
+    --QA_model_path save_model_QA_permutations/HotpotQA_QA_BiGRU_roberta-base-squad2.pt \
+    --LMmodel_path data/models/roberta-base-squad2 
+"""

@@ -35,7 +35,7 @@ def compute_recall(logits, labels, mask):
 # args = Namespace(
 #     # Data and path information
 #     model_state_file = "GNN_hidden64_heads8_pad300_chunk_first.pt",
-#     save_dir = 'save_cache_GNN',
+#     save_dir = 'save_model_GNN',
 #     hotpotQA_item_folder = 'save_preprocess_new',
 #     log_dir='runs_GNN/hidden64_heads8_pad300_chunk_first',
 
@@ -363,7 +363,7 @@ def make_args():
         type=str,help="remain",)
     parser.add_argument(
         "--save_dir",
-        default='save_cache_GNN',
+        default='save_model_GNN',
         type=str,help="remain",)
     parser.add_argument(
         "--hotpotQA_item_folder",
@@ -419,7 +419,7 @@ if __name__ == '__main__':
 test:
 python -m torch.distributed.launch train_GNN.py --cuda \
     --model_state_file GNN_hidden64_heads8_pad300_chunk_first.pt \
-    --save_dir save_cache_GNN \
+    --save_dir save_model_GNN \
     --hotpotQA_item_folder save_preprocess_new \
     --log_dir parallel_runs_GNN/hidden64_heads8_pad300_chunk_first \
     --chunk_size 100

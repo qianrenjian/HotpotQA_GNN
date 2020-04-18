@@ -205,6 +205,7 @@ def save_in_steps(json_train, model, split_num = 200, start = 0, end = 1000):
             print(f"err id: {item['_id']}")
             continue
         hotpotQA_preprocess_cls.append(i[1])
+        assert None not in hotpotQA_preprocess_cls
         if i[0] % split_num == 0:
             
             for ques_item in tqdm(hotpotQA_preprocess_cls, desc = f'{i[0]}'):

@@ -54,7 +54,7 @@ CUDA_VISIBLE_DEVICES=0,1 nohup python -m torch.distributed.launch train_GNN.py \
     --chunk_size 100 \
     --batch_size 10 \
     --learning_rate 1e-3 \
-    --save_dir save_cache_GNN \
+    --save_dir save_model_GNN \
     --hotpotQA_item_folder save_node_repr_bert-base-cased \
     --log_dir parallel_runs_GNN/hidden64_heads8_pad300 \
     --cuda --fp16 >> train_GNN.log &

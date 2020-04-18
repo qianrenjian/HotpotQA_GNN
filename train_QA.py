@@ -29,7 +29,7 @@ from traceback import print_exc
 #     use_mini=True,
 #     json_train_mini_path='data/hotpot_train_mini.json',
 #     model_state_file = "HotpotQA_QA_BiGRU_distilroberta-base-squad2.pt",
-#     save_dir = 'save_cache_permutations',
+#     save_dir = 'save_model_QA_permutations',
 #     pretrained_model_path = 'data/models/distilroberta-base-squad2',
 #     freeze_layer_name='all',
 
@@ -390,7 +390,7 @@ def make_args():
         type=str,help="remain",)
     parser.add_argument(
         "--save_dir",
-        default='save_cache_permutations',
+        default='save_model_QA_permutations',
         type=str,help="remain",)
     parser.add_argument(
         "--pretrained_model_path",

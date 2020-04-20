@@ -144,7 +144,7 @@ def main(args):
                                                         i_from = chunk_i, 
                                                         i_to = chunk_i+args.chunk_size,
                                                         seed=args.seed+chunk_i)
-                                                        
+
             scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer=optimizer,
                             mode='min',
                             factor=0.7,
@@ -342,9 +342,9 @@ def main(args):
                                                 train_state=train_state)
                 epoch_bar.update()
 
-                if train_state['stop_early']:
-                    print('STOP EARLY!')
-                    break
+                # if train_state['stop_early']:
+                #     print('STOP EARLY!')
+                #     exit()
 
                 # epoch done.
             # chunk done.

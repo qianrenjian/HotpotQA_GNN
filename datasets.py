@@ -150,11 +150,11 @@ class HotpotQA_GNN_Dataset(Dataset):
 
         item_info_dict = {
             'feature_matrix': feature_matrix,
-            'adj': adj,
-            'sent_mask': sent_mask,
-            'para_mask': para_mask,
-            'labels': labels,
-            'answer_type': answer_type
+            'adj': adj.long(),
+            'sent_mask': sent_mask.long(),
+            'para_mask': para_mask.long(),
+            'labels': labels.long(),
+            'answer_type': answer_type.long(),
             }
 
         return item_info_dict

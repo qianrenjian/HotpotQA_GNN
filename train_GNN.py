@@ -127,10 +127,6 @@ def main(args):
         optimizer.load_state_dict(checkpoint['optimizer'])
         if args.fp16: amp.load_state_dict(checkpoint['amp'])
 
-    scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer=optimizer,
-                            mode='min',
-                            factor=0.7,
-                            patience=dataset.get_num_batches(args.batch_size)/10)
     train_state = make_train_state(args)
 
     try:
@@ -148,6 +144,12 @@ def main(args):
                                                         i_from = chunk_i, 
                                                         i_to = chunk_i+args.chunk_size,
                                                         seed=args.seed+chunk_i)
+                                                        
+            scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer=optimizer,
+                            mode='min',
+                            factor=0.7,
+                            patience=dataset.get_num_batches(args.batch_size)/10)
+
             dataset.set_parameters(args.pad_max_num, args.pad_value)
             epoch_bar = tqdm(desc='training routine',
                             total=args.num_epochs,

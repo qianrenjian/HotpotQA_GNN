@@ -1,12 +1,18 @@
 # Fine-tuning Multi-hop Question Answering With Hierarchical Graph Network
 
-a two stage model: model 1 is a graph neural network that reasons through message passing mechanism and selects support sentences as model output. the model 2 is a language model with a classifier header. 
+a two stage model: `model 1` is a graph neural network that reasons through message passing mechanism and selects support sentences as model output. the `model 2` is a language model with a classifier header. 
+
+structure of model 1:
+
+![HGN_structure](./HGN_structure.png)
+
+paper preview (uncomplete yet): [`Fine-tuning Multi-hop Question Answering with Hierarchical Graph Network`](./Fine-tuning%20Multi-hop%20Question%20Answering%20with%20Hierarchical%20Graph%20Network.pdf)
 
 ## pre-requires
 
-1. before run `pip install -r requirements.txt`, you need to download the latest package `[en_core_web_lg-2.2.5.tar.gz](https://github.com/explosion/spacy-models/releases//tag/en_core_web_lg-2.2.5)` and put it in `data/`.
+1. before run `pip install -r requirements.txt`, you need to download the latest package [`en_core_web_lg-2.2.5.tar.gz`](https://github.com/explosion/spacy-models/releases//tag/en_core_web_lg-2.2.5) and put it in `data/`.
 
-2. download pre-trained language model weights from `[transformers library](https://huggingface.co/models)` and save the model in folder (with its name) in `data/models/`.
+2. download pre-trained language model weights from [`transformers library`](https://huggingface.co/models) and save the model in folder (with its name) in `data/models/`.
 
 cache LM model code:
 
@@ -14,7 +20,7 @@ cache LM model code:
 from transformers import AutoModel, AutoTokenizer
 model_name = 'bert-base-cased' # find model name in library.
 foldername = 'bert-base-cased'
-!mkdir -p data/models/$foldername
+# !mkdir -p data/models/$foldername # UNcomment it in jupyter env.
 tokenizer = AutoTokenizer.from_pretrained(model_name)
 tokenizer.save_pretrained(f"data/models/{foldername}/")
 model = AutoModel.from_pretrained(model_name)

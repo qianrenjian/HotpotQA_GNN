@@ -1,44 +1,46 @@
 from argparse import Namespace
+import argparse
 import json
 from collections import defaultdict
 import time
+from tqdm import tqdm
 
 import torch
 from transformers import AutoTokenizer
 
 from GNN import GAT_HotpotQA
 from gen_nodes_repr import build_for_one_item
-from datasets import HotpotQA_GNN_Dataset, gen_GNN_batches, generate_QA_batches
+from datasets import HotpotQA_GNN_Dataset, HotpotQA_QA_Dataset, gen_GNN_batches, generate_QA_batches
 from QA_models import AutoQuestionAnswering
 
 
-args = Namespace(
-    # Data and model path.
-    dev_json_path = 'data/HotpotQA/hotpot_dev_distractor_v1.json',
-    GNN_model_path = 'save_model_GNN/GNN_HotpotQA_hidden64_heads8_pad300_chunk_first.pt',
-    QA_model_path = 'save_model_QA_permutations/HotpotQA_QA_BiGRU_roberta-base-squad2.pt',
-    LMmodel_path = 'data/models/roberta-base-squad2',
+# args = Namespace(
+#     # Data and model path.
+#     dev_json_path = 'data/HotpotQA/hotpot_dev_distractor_v1.json',
+#     GNN_model_path = 'save_model_GNN/GNN_HotpotQA_hidden64_heads8_pad300_chunk_first.pt',
+#     QA_model_path = 'save_model_QA_permutations/HotpotQA_QA_BiGRU_roberta-base-squad2.pt',
+#     model_path = 'data/models/roberta-base-squad2',
 
-    # GNN parameters. MUST match saved pt file.
-    features = 768,
-    hidden = 64,
-    nclass = 2,
-    dropout = 0,
-    alpha = 0.3,
-    nheads = 8,
-    pad_max_num = 300,
+#     # GNN parameters. MUST match saved pt file.
+#     features = 768,
+#     hidden = 64,
+#     nclass = 2,
+#     dropout = 0,
+#     alpha = 0.3,
+#     nheads = 8,
+#     pad_max_num = 300,
 
-    # Parameters for QA.
-    header_mode='MLP',
-    cls_token_id = 0,
-    topN_sents = 3,
-    max_length = 512,
-    uncased = False,
+#     # Parameters for QA.
+#     header_mode='MLP',
+#     cls_token_id = 0,
+#     topN_sents = 3,
+#     max_length = 512,
+#     uncased = False,
 
-    # Runtime hyper parameter
-    cuda=True,
-    device=None,
-)
+#     # Runtime hyper parameter
+#     cuda=True,
+#     device=None,
+#     )
 
 def set_envs(args):
     if not args.device:
@@ -47,12 +49,16 @@ def set_envs(args):
         args.device = torch.device("cpu")
 
 def eval(args, dev_json):
-    ques_items = build_for_one_item(dev_json[:2], args)
+    test_nums = args.test_nums if args.test_nums >=0 else None
+    ques_items = build_for_one_item(dev_json[:test_nums], args)
     classifierGNN = GAT_HotpotQA(features=args.features, hidden=args.hidden, nclass=args.nclass, 
                                 dropout=args.dropout, alpha=args.alpha, nheads=args.nheads, 
                                 nodes_num=args.pad_max_num)
     checkpoint = torch.load(args.GNN_model_path)
-    classifierGNN.load_state_dict(checkpoint['model'])
+    try:
+        classifierGNN.load_state_dict(checkpoint['model'])
+    except:
+        classifierGNN.load_state_dict({k.replace('module.',''):v for k,v in checkpoint['model'].items()})
     _ = classifierGNN.eval()
     classifierGNN.to(args.device)
 
@@ -61,10 +67,11 @@ def eval(args, dev_json):
     print(datasetGNN)
 
     # GNN eval.
+    pbar_GNN = tqdm(total = datasetGNN.get_num_batches(1), desc="GNN EVAL")
     batch_generator = gen_GNN_batches(datasetGNN, 1, shuffle=False, drop_last=False, device=args.device)
     sup_dict = {}
     sup_raw_dict = {}
-    QA_eval_list = [] # for model 2.
+    QA_eval_list, Qtype_list = [], [] # for model 2.
     for index, batch_dict in enumerate(batch_generator):
         with torch.no_grad():
             logits_sent, logits_para, logits_Qtype = \
@@ -82,6 +89,9 @@ def eval(args, dev_json):
 
         sup_sent_id_list = [i[:-1] for i in info_list]
         sup_sent_list = [i[-1] for i in info_list]
+
+        _values, indices = logits_Qtype.max(dim=-1)
+        Qtype_list.append(indices.tolist()[0])
         
         sup_dict[item['id']] = sup_sent_id_list
         sup_raw_dict[item['id']] = sup_sent_list
@@ -89,9 +99,11 @@ def eval(args, dev_json):
         question = item["node_list"][0].content_raw
         QA_eval_list.append((question, sup_sent_list))
 
+        pbar_GNN.update()
+
     # LM eval.
-    tokenizer = AutoTokenizer.from_pretrained(args.LMmodel_path, local_files_only=True)
-    classifierQA = AutoQuestionAnswering.from_pretrained(model_path=args.LMmodel_path,
+    tokenizer = AutoTokenizer.from_pretrained(args.model_path, local_files_only=True)
+    classifierQA = AutoQuestionAnswering.from_pretrained(model_path=args.model_path,
                                                         header_mode=args.header_mode,
                                                         cls_index=tokenizer.cls_token_id)
     classifierQA = classifierQA.to(args.device)
@@ -110,6 +122,7 @@ def eval(args, dev_json):
     ans_dict = {}
     ans_dict_topN = defaultdict(list)
 
+    pbar_QA = tqdm(total = datasetQA.get_num_batches(1), desc="QA EVAL")
     for index, batch_dict in enumerate(batch_generatorQA):
         with torch.no_grad():
             res = classifierQA(**batch_dict)
@@ -120,9 +133,18 @@ def eval(args, dev_json):
             
             input_ids = batch_dict['input_ids'].squeeze().tolist()
             item = ques_items[index]
+
             for index,(i,j) in enumerate(zip(start_top_index,end_top_index)):
-                if index == 0: ans_dict[item['id']] = tokenizer.decode(input_ids[i:j+1])
+                if index == 0:
+                    if Qtype_list[index] == 0:
+                        ans_dict[item['id']] = tokenizer.decode(input_ids[i:j+1])
+                    else: # comparations
+                        _values, indices = cls_logits.max(dim=-1)
+                        ans = 'yes' if indices.tolist()[0] == 1 else 'no'
+                        ans_dict[item['id']] = ans
                 ans_dict_topN[item['id']].append(tokenizer.decode(input_ids[i:j+1]))
+        pbar_QA.update()
+
     # combine.
     final_res = {}
     final_res['answer'] = ans_dict
@@ -153,7 +175,7 @@ def make_args():
         default='save_model_QA_permutations/HotpotQA_QA_BiGRU_roberta-base-squad2.pt',
         type=str,help="remain",)
     parser.add_argument(
-        "--LMmodel_path",
+        "--model_path",
         default='data/models/roberta-base-squad2',
         type=str,help="remain",)
 
@@ -177,6 +199,9 @@ def make_args():
     parser.add_argument("--cuda", action="store_true", help="remain")
     parser.add_argument("--device",default=None,type=str,help="remain")
 
+    # test setting
+    parser.add_argument("--test_nums",default=-1,type=int,help="remain")
+
     args = parser.parse_args()
     return args
 
@@ -188,9 +213,11 @@ if __name__ == "__main__":
         json.dump(res, f1)
 
 """
-python evaluate.py \
+python evaluate.py --cuda \
+    --hidden 256 --nheads 8 \
     --dev_json_path data/HotpotQA/hotpot_dev_distractor_v1.json \
-    --GNN_model_path save_model_GNN/GNN_HotpotQA_hidden64_heads8_pad300_chunk_first.pt \
-    --QA_model_path save_model_QA_permutations/HotpotQA_QA_BiGRU_roberta-base-squad2.pt \
-    --LMmodel_path data/models/roberta-base-squad2 
+    --GNN_model_path models_checkpoints/GNN/GNN_hidden256_heads8_pad300.pt  \
+    --QA_model_path models_checkpoints/QA/HotpotQA_QA_MLP+unfreeze1_roberta-base.pt \
+    --model_path data/models/roberta-base \
+    --test_nums 3
 """

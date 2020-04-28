@@ -260,7 +260,7 @@ class HotpotQA_QA_Dataset(Dataset):
         self.val_size = len(self.val_list)
 
         self.eval_list = eval_list
-        self.eval_size = len(self.eval_list)
+        self.eval_size = len(self.eval_list) if eval_list != None else 0
 
         # func
         self._lookup_dict = {'train': (self.train_list, self.train_size),

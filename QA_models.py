@@ -227,24 +227,13 @@ class PoolerEndLogits(nn.Module):
         return x
 
 class PoolerAnswerClass(nn.Module):
-    """ Compute SQuAD 2.0 answer class from classification and start tokens hidden states. """
-
     def __init__(self, config):
         super().__init__()
-        self.dense_0 = nn.Linear(config.hidden_size * 2, config.hidden_size)
-        self.activation = nn.Tanh()
-        self.dense_1 = nn.Linear(config.hidden_size, 1, bias=False)
+        self.activation = F.leaky_relu
+        self.dense = nn.Linear(config.hidden_size, 2)
 
-    def forward(self, hidden_states, start_states=None, start_positions=None, cls_index=None,ignore_index=-100):
+    def forward(self, hidden_states, cls_index=None):
         hsz = hidden_states.shape[-1]
-        assert (
-            start_states is not None or start_positions is not None
-        ), "One of start_states, start_positions should be not None"
-        if start_positions is not None:
-            start_positions = deepcopy(start_positions)
-            start_positions -= start_positions.eq(ignore_index)*ignore_index
-            start_positions = start_positions[:, None, None].expand(-1, -1, hsz)  # shape (bsz, 1, hsz)
-            start_states = hidden_states.gather(-2, start_positions).squeeze(-2)  # shape (bsz, hsz)
 
         if cls_index is not None:
             cls_index = cls_index[:, None, None].expand(-1, -1, hsz)  # shape (bsz, 1, hsz)
@@ -252,9 +241,7 @@ class PoolerAnswerClass(nn.Module):
         else:
             cls_token_state = hidden_states[:, -1, :]  # shape (bsz, hsz)
 
-        x = self.dense_0(torch.cat([start_states, cls_token_state], dim=-1))
-        x = self.activation(x)
-        x = self.dense_1(x).squeeze(-1)
+        x = self.dense(cls_token_state)
 
         return x
 
@@ -396,11 +383,11 @@ class AutoQuestionAnswering(PreTrainedModel):
             end_top_log_probs = end_top_log_probs.view(-1, self.start_n_top * self.end_n_top)
             # end_top_index = end_top_index.view(-1, self.start_n_top * self.end_n_top)
 
-            start_states = torch.einsum(
-                "blh,bl->bh", hidden_states, start_log_probs
-            )  # get the representation of START as weighted sum of hidden states
+            # start_states = torch.einsum(
+            #     "blh,bl->bh", hidden_states, start_log_probs
+            # )  # get the representation of START as weighted sum of hidden states
             cls_logits = self.answer_class(
-                hidden_states, start_states=start_states, cls_index=cls_index
+                hidden_states, cls_index=cls_index
             )  # Shape (batch size,): one single `cls_logits` for each sample
 
             outputs = (start_top_log_probs, start_top_index, end_top_log_probs, end_top_index, cls_logits) + outputs

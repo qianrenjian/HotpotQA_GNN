@@ -13,6 +13,7 @@ from tqdm import tqdm
 from transformers import AutoModel, AutoTokenizer
 
 from Nodes import *
+from utils import handle_dirs
 
 def create_ques_info_dict():
     # 每个question item由5个元素组成
@@ -198,6 +199,7 @@ def gen_nodes_feat(ques_item, model, test_mode = False):
 
 def save_in_steps(json_train, model, split_num = 200, start = 0, end = 1000):
     hotpotQA_preprocess_cls = []
+    handle_dirs(args.save_dir)
     for index,item in enumerate(tqdm(json_train[start:end])):
         if os.path.exists(f"{args.save_dir}/{item['_id']}.json"): continue
         i = (index + start + 1, gen_nodes_feat(ques_item = construct_graph(item), model=model))

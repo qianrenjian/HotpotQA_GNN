@@ -12,7 +12,7 @@ from GNN import GAT_HotpotQA
 from gen_nodes_repr import build_for_one_item
 from datasets import HotpotQA_GNN_Dataset, HotpotQA_QA_Dataset, gen_GNN_batches, generate_QA_batches
 from QA_models import AutoQuestionAnswering
-
+from utils import handle_dirs
 
 # args = Namespace(
 #     # Data and model path.
@@ -44,9 +44,12 @@ from QA_models import AutoQuestionAnswering
 
 def set_envs(args):
     if not args.device:
-        args.device = torch.device("cuda" if torch.cuda.is_available() and args.cuda else "cpu")
+        args.device = torch.device(f"cuda:{args.cuda_id}" \
+            if torch.cuda.is_available() and (args.cuda or args.cuda_id) else "cpu")
     if not args.cuda:
         args.device = torch.device("cpu")
+    args.dev_features_folder = f"dev_feats/{args.model_path.split('/')[-1]}"
+    handle_dirs(args.dev_features_folder)
 
 def eval(args, dev_json):
     test_nums = args.test_nums if args.test_nums >=0 else None
@@ -178,6 +181,7 @@ def make_args():
         "--model_path",
         default='data/models/roberta-base-squad2',
         type=str,help="remain",)
+    parser.add_argument("--dev_features_folder",default='',type=str,help="remain")
 
     # GNN parameters. MUST match saved pt file.
     parser.add_argument("--features",default=768,type=int,help="remain")
@@ -197,6 +201,7 @@ def make_args():
 
     # Runtime hyper parameter
     parser.add_argument("--cuda", action="store_true", help="remain")
+    parser.add_argument("--cuda_id",default=0,type=int,help="remain")
     parser.add_argument("--device",default=None,type=str,help="remain")
     parser.add_argument("--do_eval", action="store_true", help="remain")
 

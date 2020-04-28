@@ -99,3 +99,5 @@ def rm_rf(obj_dir):
         for name in dirs:
             os.rmdir(os.path.join(root, name))
 
+if __name__ == "__main__":
+    pass

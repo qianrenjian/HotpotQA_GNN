@@ -235,9 +235,9 @@ def build_for_one_item(item_list, args_):
         model = AutoModel.from_pretrained(args.model_path, local_files_only=True)
         model = model.to(args.device)
         set_spacy()
-        res = [gen_nodes_feat(ques_item=construct_graph(item), model=model) for item in tqdm(item_list,desc='gen node init...')]
-        res = [i for i in res if i != None]
-    return 
+    res = [gen_nodes_feat(ques_item=construct_graph(item), model=model) for item in tqdm(item_list,desc='gen node init...')]
+    res = [i for i in res if i != None]
+    return res
 
 def make_args():
     parser = argparse.ArgumentParser()

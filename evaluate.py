@@ -226,8 +226,8 @@ test:
 python evaluate.py --cuda \
     --hidden 256 --nheads 8 \
     --dev_json_path data/HotpotQA/hotpot_dev_distractor_v1.json \
-    --GNN_model_path models_checkpoints/GNN/GNN_hidden256_heads8_pad300.pt  \
-    --QA_model_path models_checkpoints/QA/HotpotQA_QA_MLP+unfreeze2_roberta-base.pt \
+    --GNN_model_path data/models_checkpoints/GNN/GNN_hidden256_heads8_pad300.pt  \
+    --QA_model_path data/models_checkpoints/QA/HotpotQA_QA_MLP+unfreeze2_roberta-base.pt \
     --model_path data/models/roberta-base \
     --test_nums 3
 
@@ -235,8 +235,8 @@ formal:
 python evaluate.py --cuda \
     --hidden 256 --nheads 8 \
     --dev_json_path data/HotpotQA/hotpot_dev_distractor_v1.json \
-    --GNN_model_path models_checkpoints/GNN/GNN_hidden256_heads8_pad300.pt  \
-    --QA_model_path models_checkpoints/QA/HotpotQA_QA_MLP+unfreeze2_roberta-base.pt \
+    --GNN_model_path data/models_checkpoints/GNN/GNN_hidden256_heads8_pad300.pt  \
+    --QA_model_path data/models_checkpoints/QA/HotpotQA_QA_MLP+unfreeze2_roberta-base.pt \
     --model_path data/models/roberta-base \
     --do_eval 
 """

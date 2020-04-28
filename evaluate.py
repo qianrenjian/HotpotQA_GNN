@@ -198,6 +198,7 @@ def make_args():
     # Runtime hyper parameter
     parser.add_argument("--cuda", action="store_true", help="remain")
     parser.add_argument("--device",default=None,type=str,help="remain")
+    parser.add_argument("--do_eval", action="store_true", help="remain")
 
     # test setting
     parser.add_argument("--test_nums",default=-1,type=int,help="remain")
@@ -211,8 +212,12 @@ if __name__ == "__main__":
     time_now = time.strftime("%Y-%m-%d_%H-%M-%S", time.localtime())
     with open(f"dev_distractor_pred_{time_now}.json", 'w', encoding='utf-8') as f1:
         json.dump(res, f1)
-
+    if args.do_eval:
+        import hotpot_evaluate_v1
+        hotpot_evaluate_v1.eval(f"dev_distractor_pred_{time_now}.json", args.dev_json_path)
+    
 """
+test:
 python evaluate.py --cuda \
     --hidden 256 --nheads 8 \
     --dev_json_path data/HotpotQA/hotpot_dev_distractor_v1.json \
@@ -220,4 +225,13 @@ python evaluate.py --cuda \
     --QA_model_path models_checkpoints/QA/HotpotQA_QA_MLP+unfreeze1_roberta-base.pt \
     --model_path data/models/roberta-base \
     --test_nums 3
+
+formal:
+python evaluate.py --cuda \
+    --hidden 256 --nheads 8 \
+    --dev_json_path data/HotpotQA/hotpot_dev_distractor_v1.json \
+    --GNN_model_path models_checkpoints/GNN/GNN_hidden256_heads8_pad300.pt  \
+    --QA_model_path models_checkpoints/QA/HotpotQA_QA_MLP+unfreeze1_roberta-base.pt \
+    --model_path data/models/roberta-base \
+    --do_eval 
 """

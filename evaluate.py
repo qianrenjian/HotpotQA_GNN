@@ -46,7 +46,7 @@ from utils import handle_dirs
 def set_envs(args):
     if not args.device:
         args.device = torch.device(f"cuda:{args.cuda_id}" \
-            if torch.cuda.is_available() and (args.cuda or args.cuda_id) else "cpu")
+            if torch.cuda.is_available() and args.cuda else "cpu")
     args.dev_features_folder = f"dev_feats/{args.model_path.split('/')[-1]}"
     handle_dirs(args.dev_features_folder)
 
@@ -232,7 +232,7 @@ if __name__ == "__main__":
     
 """
 test:
-python evaluate.py --cuda \
+python evaluate.py --cuda --cuda_id 0 \
     --hidden 256 --nheads 8 \
     --dev_json_path data/HotpotQA/hotpot_dev_distractor_v1.json \
     --GNN_model_path data/models_checkpoints/GNN/GNN_hidden256_heads8_pad300.pt  \
@@ -241,7 +241,7 @@ python evaluate.py --cuda \
     --test_nums 10 --step 3
 
 formal:
-python evaluate.py --cuda \
+python evaluate.py --cuda --cuda_id 0 \
     --hidden 256 --nheads 8 \
     --dev_json_path data/HotpotQA/hotpot_dev_distractor_v1.json \
     --GNN_model_path data/models_checkpoints/GNN/GNN_hidden256_heads8_pad300.pt  \

@@ -241,11 +241,11 @@ python evaluate.py --cuda --cuda_id 0 \
     --test_nums 10 --step 3
 
 formal:
-python evaluate.py --cuda --cuda_id 0 \
+nohup python evaluate.py --cuda --cuda_id 0 \
     --hidden 256 --nheads 8 \
     --dev_json_path data/HotpotQA/hotpot_dev_distractor_v1.json \
-    --GNN_model_path data/models_checkpoints/GNN/GNN_hidden256_heads8_pad300.pt  \
+    --GNN_model_path data/models_checkpoints/GNN/GNN_hidden256_heads8_pad300.pt \
     --QA_model_path data/models_checkpoints/QA/HotpotQA_QA_MLP+unfreeze2_roberta-base.pt \
     --model_path data/models/roberta-base \
-    --step 100
+    --step 30 >> eval_256_8.log &
 """

@@ -4,6 +4,7 @@ import json
 from collections import defaultdict
 import time
 from tqdm import tqdm
+from traceback import print_exc
 
 import torch
 from transformers import AutoTokenizer
@@ -83,78 +84,81 @@ def eval(args, dev_json):
     pbar = tqdm(total = end_point, desc="EVAL")
 
     for start in range(0, end_point, args.step):
-        end = start + args.step
-        ques_items = build_for_one_item(dev_json[start:end], args)
-        datasetGNN = HotpotQA_GNN_Dataset.load_for_eval(ques_items)
-        datasetGNN.set_parameters(300,0)
-        # print(datasetGNN)
+        try:
+            end = start + args.step
+            ques_items = build_for_one_item(dev_json[start:end], args)
+            datasetGNN = HotpotQA_GNN_Dataset.load_for_eval(ques_items)
+            datasetGNN.set_parameters(300,0)
+            # print(datasetGNN)
 
-        # GNN eval.
-        batch_generator = gen_GNN_batches(datasetGNN, 1, shuffle=False, drop_last=False, device=args.device)
-        # sup_dict = {}
-        sup_raw_dict = {}
-        QA_eval_list, Qtype_list = [], [] # for model 2.
-        for index, batch_dict in enumerate(batch_generator):
-            with torch.no_grad():
-                logits_sent, logits_para, logits_Qtype = \
-                                classifierGNN(batch_dict['feature_matrix'], batch_dict['adj'])
+            # GNN eval.
+            batch_generator = gen_GNN_batches(datasetGNN, 1, shuffle=False, drop_last=False, device=args.device)
+            # sup_dict = {}
+            sup_raw_dict = {}
+            QA_eval_list, Qtype_list = [], [] # for model 2.
+            for index, batch_dict in enumerate(batch_generator):
+                with torch.no_grad():
+                    logits_sent, logits_para, logits_Qtype = \
+                                    classifierGNN(batch_dict['feature_matrix'], batch_dict['adj'])
 
-                max_value, max_index = logits_sent.max(dim=-1) # max_index is predict class.
-                topN_sent_index_batch = (max_value * batch_dict['sent_mask'].squeeze()).topk(3, dim=-1)[1]
-                topN_sent_index_batch = topN_sent_index_batch.squeeze().tolist()
-                
-            item = ques_items[index]
-            info_list = [[item["node_list"][item["node_list"][s_id].parent_id].content_raw, 
-                                item["node_list"][s_id].order_in_para,
-                                item["node_list"][s_id].content_raw] \
-                        for s_id in topN_sent_index_batch]
-
-            sup_sent_id_list = [i[:-1] for i in info_list]
-            sup_sent_list = [i[-1] for i in info_list]
-
-            _values, indices = logits_Qtype.max(dim=-1)
-            Qtype_list.append(indices.tolist()[0])
-            
-            sup_dict[item['id']] = sup_sent_id_list
-            sup_raw_dict[item['id']] = sup_sent_list
-
-            question = item["node_list"][0].content_raw
-            QA_eval_list.append((question, sup_sent_list))
-
-        # LM eval.
-        datasetQA = HotpotQA_QA_Dataset.load_for_eval(QA_eval_list)
-        datasetQA.set_parameters(tokenizer=tokenizer, topN_sents=args.topN_sents,
-                                max_length=args.max_length, uncased=args.uncased,
-                                permutations=False)
-        batch_generatorQA = generate_QA_batches(datasetQA, 1, shuffle=False, drop_last=False, device=args.device)
-        # print(datasetQA)
-
-        # ans_dict = {}
-        ans_dict_topN = defaultdict(list)
-        for index, batch_dict in enumerate(batch_generatorQA):
-            with torch.no_grad():
-                res = classifierQA(**batch_dict)
-                start_top_log_probs, start_top_index, end_top_log_probs, end_top_index, cls_logits = res[:5]
-                start_top_index = start_top_index.squeeze().tolist()
-                end_top_index = end_top_index.squeeze().tolist()
-                assert len(start_top_index) == len(end_top_index)
-                
-                input_ids = batch_dict['input_ids'].squeeze().tolist()
+                    max_value, max_index = logits_sent.max(dim=-1) # max_index is predict class.
+                    topN_sent_index_batch = (max_value * batch_dict['sent_mask'].squeeze()).topk(3, dim=-1)[1]
+                    topN_sent_index_batch = topN_sent_index_batch.squeeze().tolist()
+                    
                 item = ques_items[index]
+                info_list = [[item["node_list"][item["node_list"][s_id].parent_id].content_raw, 
+                                    item["node_list"][s_id].order_in_para,
+                                    item["node_list"][s_id].content_raw] \
+                            for s_id in topN_sent_index_batch]
 
-                for index,(i,j) in enumerate(zip(start_top_index,end_top_index)):
-                    if index == 0:
-                        if Qtype_list[index] == 0:
-                            ans_dict[item['id']] = tokenizer.decode(input_ids[i:j+1])
-                        else: # comparations
-                            _values, indices = cls_logits.max(dim=-1)
-                            ans = 'yes' if indices.tolist()[0] == 1 else 'no'
-                            ans_dict[item['id']] = ans
-                    ans_dict_topN[item['id']].append(tokenizer.decode(input_ids[i:j+1]))
-            pbar.update()
-        
-        del ques_items
-        
+                sup_sent_id_list = [i[:-1] for i in info_list]
+                sup_sent_list = [i[-1] for i in info_list]
+
+                _values, indices = logits_Qtype.max(dim=-1)
+                Qtype_list.append(indices.tolist()[0])
+                
+                sup_dict[item['id']] = sup_sent_id_list
+                sup_raw_dict[item['id']] = sup_sent_list
+
+                question = item["node_list"][0].content_raw
+                QA_eval_list.append((question, sup_sent_list))
+
+            # LM eval.
+            datasetQA = HotpotQA_QA_Dataset.load_for_eval(QA_eval_list)
+            datasetQA.set_parameters(tokenizer=tokenizer, topN_sents=args.topN_sents,
+                                    max_length=args.max_length, uncased=args.uncased,
+                                    permutations=False)
+            batch_generatorQA = generate_QA_batches(datasetQA, 1, shuffle=False, drop_last=False, device=args.device)
+            # print(datasetQA)
+
+            # ans_dict = {}
+            ans_dict_topN = defaultdict(list)
+            for index, batch_dict in enumerate(batch_generatorQA):
+                with torch.no_grad():
+                    res = classifierQA(**batch_dict)
+                    start_top_log_probs, start_top_index, end_top_log_probs, end_top_index, cls_logits = res[:5]
+                    start_top_index = start_top_index.squeeze().tolist()
+                    end_top_index = end_top_index.squeeze().tolist()
+                    assert len(start_top_index) == len(end_top_index)
+                    
+                    input_ids = batch_dict['input_ids'].squeeze().tolist()
+                    item = ques_items[index]
+
+                    for index,(i,j) in enumerate(zip(start_top_index,end_top_index)):
+                        if index == 0:
+                            if Qtype_list[index] == 0:
+                                ans_dict[item['id']] = tokenizer.decode(input_ids[i:j+1])
+                            else: # comparations
+                                _values, indices = cls_logits.max(dim=-1)
+                                ans = 'yes' if indices.tolist()[0] == 1 else 'no'
+                                ans_dict[item['id']] = ans
+                        ans_dict_topN[item['id']].append(tokenizer.decode(input_ids[i:j+1]))
+                pbar.update()
+            
+            del ques_items
+        except:
+            print_exc()
+
     # combine.
     final_res['answer'] = ans_dict
     final_res['sp'] = sup_dict

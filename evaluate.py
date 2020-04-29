@@ -47,8 +47,6 @@ def set_envs(args):
     if not args.device:
         args.device = torch.device(f"cuda:{args.cuda_id}" \
             if torch.cuda.is_available() and (args.cuda or args.cuda_id) else "cpu")
-    if not args.cuda:
-        args.device = torch.device("cpu")
     args.dev_features_folder = f"dev_feats/{args.model_path.split('/')[-1]}"
     handle_dirs(args.dev_features_folder)
 
